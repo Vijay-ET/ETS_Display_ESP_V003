@@ -973,6 +973,159 @@ function setval_drag(str, val)
   }
 }
 
+// ----------------------->   Configuration Pages Input Functions   <---------   
+// V: function that will be called when configuration parameters are changing.
+function config_page_input(str,val)
+{
+  if(!str)
+  {
+    return;
+  }
+
+  switch(str)
+  {
+    case "Vlim":
+    break;
+
+    case "Clim":
+    break;
+
+    case "VSlope":
+    break;
+
+    case "ISlope":
+    break;
+
+    case "TEnable":
+    break;
+
+    case "RemLastSettings":
+    break;
+
+    case "OutputOnDelay":
+    break;
+
+    case "DataLogging":
+    break;
+
+    default:
+    break;
+  }
+}
+
+// V: function that will be called when config page sliders are dragged.
+function config_page_slider_drag(str,val)
+{
+  if(!str)
+  {
+    return;
+  }
+
+  switch(str)
+  {
+    case "Vlim":
+      document.querySelector('input[type="number"].VlimInput').value = val;
+      break;
+    
+    case "Clim":
+      document.querySelector('input[type="number"].ClimInput').value = val;
+      break;
+  
+    case "VSlope":
+      document.querySelector('input[type="number"].VSlopeInput').value = val;
+    break;
+
+    case "ISlope":
+      document.querySelector('input[type="number"].ISlopeInput').value = val;
+    break;
+
+    case "TEnable":
+      document.querySelector('input[type="number"].TEnableInput').value = val;
+    break;
+
+    case "OutputOnDelay":
+      document.querySelector('input[type="number"].ClimInput').value = val;
+    break;
+
+    case "DataLogging":
+      document.querySelector('input[type="number"].ClimInput').value = val;
+    break;
+
+    default:
+    break;
+  }
+}
+
+
+// ----------------->    Protection page input functions    <--------------
+// V: function that will be called when protection parameters are changed.
+function Protection_page_input(str,val)
+{
+  if(!str)
+  {
+    return;
+  }
+
+  switch(str)
+  {
+    case "Ovp":
+    break;
+
+    case "Uvp":
+    break;
+
+    case "Ocp":
+    break;
+
+    case "UvpT":
+    break;
+
+    case "OcpT":
+    break;
+
+    case "Foldback":
+    break;
+
+    default:
+    break;
+  }
+}
+
+// V: function that will be called when protection page sliders are dragged.
+function protection_page_slider_drag(str,val)
+{
+  if(!str)
+  {
+    return;
+  }
+
+  switch(str)
+  {
+    case "Ovp":
+      document.querySelector('input[type="number"].OvpInput').value = val;
+    break;
+
+    case "Uvp":
+      document.querySelector('input[type="number"].UvpInput').value = val;
+    break;
+
+    case "Ocp":
+      document.querySelector('input[type="number"].OcpInput').value = val;
+    break;
+
+    case "UvpT":
+      document.querySelector('input[type="number"].UvpTInput').value = val;
+    break;
+
+    case "OcpT":
+      document.querySelector('input[type="number"].OcpTInput').value = val;
+    break;
+
+    default:
+    break;
+  }
+}
+
 
 // --------------- Websocket Send function definitions --------------
 

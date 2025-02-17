@@ -292,10 +292,10 @@
                                     <div class="columns is-mobile" id="OvpRow">
                                         <div class="column is-2"><b>OVP</b></div>
                                         <div class="column is-5">
-                                            <input class="fit OvpInput slidercolor" max="1000" onchange='setval_input("Ovp",this.value)' step="0.1" type="range" value="300" id="OvpRange" oninput='setval_drag("Ovp",this.value)'>
+                                            <input class="fit OvpInput slidercolor" max="1000" onchange='Protection_page_input("Ovp",this.value)' step="0.1" type="range" value="300" id="OvpRange" oninput='protection_page_slider_drag("Ovp",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input OvpInput" max="1000" onchange='setval_input("Ovp",this.value)' step="0.1" type="number" value="300">
+                                            <input class="input OvpInput" max="1000" onchange='Protection_page_input("Ovp",this.value)' step="0.1" type="number" value="300">
                                         </div>
                                         <div class="column is-2">V</div>
                                     </div>
@@ -304,7 +304,7 @@
                                     <div class="columns is-mobile" id="foldbackRow">
                                         <div class="column is-2" style="margin-top: 2px; margin-left: 250px;" ><b>FOLDBACK</b></div>
                                         <div class="column is-8" >
-                                            <select class="input Foldback InputBox" onchange='setval_input("Foldback", this.value)' style=" margin-left: -10px; width: 200px; width: 100px;">
+                                            <select class="input Foldback InputBox" onchange='Protection_page_input("Foldback", this.value)' style=" margin-left: -10px; width: 200px; width: 100px;">
                                                 <option value="off">OFF</option>
                                                 <option value="cv">CV</option>
                                                 <option value="cc">CC</option>
@@ -320,10 +320,10 @@
                                     <div class="columns is-mobile" id="UvpRow">
                                         <div class="column is-2"><b>UVP</b></div>
                                         <div class="column is-5">
-                                            <input class="fit UvpInput slidercolor" max="675" onchange='setval_input("Uvp",this.value)' step="0.01" type="range" value="30" id="UvpRange" oninput='setval_drag("Uvp",this.value)' min="0">
+                                            <input class="fit UvpInput slidercolor" max="675" onchange='Protection_page_input("Uvp",this.value)' step="0.1" type="range" value="30" id="UvpRange" oninput='protection_page_slider_drag("Uvp",this.value)' min="0">
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input UvpInput" max="100" onchange='setval_input("Uvp",this.value)' step="0.01" type="number" value="30" min="0">
+                                            <input class="input UvpInput" max="675" onchange='Protection_page_input("Uvp",this.value)' step="0.1" type="number" value="30" min="0">
                                         </div>
                                         <div class="column is-2">A</div>
                                     </div>
@@ -334,10 +334,10 @@
                                     <div class="columns is-mobile" id="OcpRow">
                                         <div class="column is-2"><b>OCP</b></div>
                                         <div class="column is-5">
-                                            <input class="fit OcpInput slidercolor" max="100" onchange='setval_input("Ocp",this.value)' step="0.001" type="range" value="30" id="OcpRange" oninput='setval_drag("Ocp",this.value)'>
+                                            <input class="fit OcpInput slidercolor" max="100" onchange='Protection_page_input("Ocp",this.value)' step="0.01" type="range" value="30" id="OcpRange" oninput='protection_page_slider_drag("Ocp",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input OcpInput" max="100" onchange='setval_input("Ocp",this.value)' step="0.001" type="number" value="30">
+                                            <input class="input OcpInput" max="100" onchange='Protection_page_input("Ocp",this.value)' step="0.01" type="number" value="30">
                                         </div>
                                         <div class="column is-2">Ω</div>
                                     </div>
@@ -348,12 +348,12 @@
                                     <div class="columns is-mobile" id="UvpTRow">
                                         <div class="column is-2"><b>UVP TIME</b></div>
                                         <div class="column is-5">
-                                            <input class="fit UvpTInput slidercolor" max="10000" onchange='setval_input("UvpT",this.value)' step="1" type="range" value="3000" id="UvpTRange" oninput='setval_drag("UvpT",this.value)'>
+                                            <input class="fit UvpTInput slidercolor" max="1000" onchange='Protection_page_input("UvpT",this.value)' step="1" type="range" value="300" id="UvpTRange" oninput='protection_page_slider_drag("UvpT",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input UvpTInput" max="10000" onchange='setval_input("UvpT",this.value)' step="1" type="number" value="3000">
+                                            <input class="input UvpTInput" max="1000" onchange='Protection_page_input("UvpT",this.value)' step="1" type="number" value="300">
                                         </div>
-                                        <div class="column is-2">W</div>
+                                        <div class="column is-2">Sec</div>
                                     </div>
                                 </div>
                             </div>
@@ -362,12 +362,12 @@
                                     <div class="columns is-mobile" id="OcpTRow">
                                         <div class="column is-2"><b>OCP TIME</b></div>
                                         <div class="column is-5">
-                                            <input class="fit OcpTInput slidercolor" max="1000" onchange='setval_input("OcpT",this.value)' step="0.01" type="range" value="300" id="OcpTRange" oninput='setval_drag("OcpT",this.value)'>
+                                            <input class="fit OcpTInput slidercolor" max="5000" onchange='Protection_page_input("OcpT",this.value)' step="1" type="range" value="300" id="OcpTRange" oninput='protection_page_slider_drag("OcpT",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input OcpTInput" max="1000" onchange='setval_input("OcpT",this.value)' step="0.01" type="number" value="300">
+                                            <input class="input OcpTInput" max="5000" onchange='Protection_page_input("OcpT",this.value)' step="1" type="number" value="300">
                                         </div>
-                                        <div class="column is-2">V</div>
+                                        <div class="column is-2">Sec</div>
                                     </div>
                                 </div>
                             </div>
@@ -405,10 +405,10 @@
                                     <div class="columns is-mobile" id="VlimRow">
                                         <div class="column is-2"><b>V LIMIT</b></div>
                                         <div class="column is-5">
-                                            <input class="fit VlimInput slidercolor" max="100" onchange='setval_input("Vlim",this.value)' step="0.001" type="range" value="30" id="VlimRange" oninput='setval_drag("Vlim",this.value)'>
+                                            <input class="fit VlimInput slidercolor" max="100" onchange='config_page_input("Vlim",this.value)' step="0.001" type="range" value="30" id="VlimRange" oninput='config_page_slider_drag("Vlim",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input VlimInput" max="100" onchange='setval_input("Vlim",this.value)' step="0.001" type="number" value="30">
+                                            <input class="input VlimInput" max="100" onchange='config_page_input("Vlim",this.value)' step="0.001" type="number" value="30">
                                         </div>
                                         <div class="column is-2">V</div>
                                     </div>
@@ -418,7 +418,7 @@
                                     <div class="columns is-mobile" id="RemLastSettings">
                                         <div class="column is-2" style="margin-left: 200px;"><b>LAST SETTINGS</b></div>
                                         <div class="column is-5" style="width: 650px;">
-                                            <select class="input RemLastSettings InputBox" onchange='setval_input("RemLastSettings", this.value)' style=" margin-left: 50px; width: 100px;">
+                                            <select class="input RemLastSettings InputBox" onchange='config_page_input("RemLastSettings", this.value)' style=" margin-left: 50px; width: 100px;">
                                                 <option value="off">OFF</option>
                                                 <option value="on">ON</option>    
                                             </select>
@@ -432,10 +432,10 @@
                                     <div class="columns is-mobile" id="ClimRow">
                                         <div class="column is-2"><b>C LIMIT</b></div>
                                         <div class="column is-5">
-                                            <input class="fit ClimInput slidercolor" max="10000" onchange='setval_input("Clim",this.value)' step="1" type="range" value="3000" id="ClimRange" oninput='setval_drag("Clim",this.value)'>
+                                            <input class="fit ClimInput slidercolor" max="10000" onchange='config_page_input("Clim",this.value)' step="1" type="range" value="3000" id="ClimRange" oninput='config_page_slider_drag("Clim",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input ClimInput" max="10000" onchange='setval_input("Clim",this.value)' step="1" type="number" value="3000">
+                                            <input class="input ClimInput" max="10000" onchange='config_page_input("Clim",this.value)' step="1" type="number" value="3000">
                                         </div>
                                         <div class="column is-2">A</div>
                                     </div>
@@ -444,7 +444,7 @@
                                     <div class="columns is-mobile" id="OutputOnDelayRow">
                                         <div class="column is-2" style="margin-left: 200px;" ><b>OUTPUT ON DELAY</b></div>
                                         <div class="column is-8" style="margin-top: -5px; margin-left: -24px; width: 650px;">
-                                            <select class="input InputBox" onchange='setval_input("OutputOnDelay", this.value)' style=" margin-left: 50px; width: 100px;" >
+                                            <select class="input InputBox" onchange='config_page_input("OutputOnDelay", this.value)' style=" margin-left: 50px; width: 100px;" >
                                                 <option value="off">OFF</option>
                                                 <option value="on">ON</option>
                                             </select>
@@ -457,10 +457,10 @@
                                     <div class="columns is-mobile" id="VSlopeRow">
                                         <div class="column is-2"><b>V SLOPE</b></div>
                                         <div class="column is-5">
-                                            <input class="fit VSlopeInput slidercolor" max="1000" onchange='setval_input("VSlope",this.value)' step="0.01" type="range" value="300" id="VSlopeRange" oninput='setval_drag("VSlope",this.value)'>
+                                            <input class="fit VSlopeInput slidercolor" max="1000" onchange='config_page_input("VSlope",this.value)' step="0.01" type="range" value="300" id="VSlopeRange" oninput='config_page_slider_drag("VSlope",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input VSlopeInput" max="1000" onchange='setval_input("VSlope",this.value)' step="0.01" type="number" value="300">
+                                            <input class="input VSlopeInput" max="1000" onchange='config_page_input("VSlope",this.value)' step="0.01" type="number" value="300">
                                         </div>
                                         <div class="column is-2">V/S</div>
                                     </div>
@@ -470,7 +470,7 @@
                                     <div class="columns is-mobile" id="DataLoggingRow">
                                         <div class="column is-2" style="margin-left: 200px;"><b>DATA LOGGING</b></div>
                                         <div class="column is-8" style="margin-top: -5px; margin-left: -24px; width: 650px;">
-                                            <select class="input InputBox" onchange='setval_input("DataLogging", this.value)' style=" margin-left: 50px; width: 100px;">
+                                            <select class="input InputBox" onchange='config_page_input("DataLogging", this.value)' style=" margin-left: 50px; width: 100px;">
                                                 <option value="off">OFF</option>
                                                 <option value="on">ON</option>
                                             </select>
@@ -484,10 +484,10 @@
                                     <div class="columns is-mobile" id="ISlopeRow">
                                         <div class="column is-2" ><b>I SLOPE</b></div>
                                         <div class="column is-5">
-                                            <input class="fit ISlopeInput slidercolor" max="0" onchange='setval_input("ISlope",this.value)' step="1" type="range" value="3000" id="ISlopeRange" oninput='setval_drag("ISlope",this.value)'>
+                                            <input class="fit ISlopeInput slidercolor" max="65536" onchange='config_page_input("ISlope",this.value)' step="1" type="range" value="3000" id="ISlopeRange" oninput='config_page_slider_drag("ISlope",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input ISlopeInput" max="10000" onchange='setval_input("ISlope",this.value)' step="1" type="number" value="3000">
+                                            <input class="input ISlopeInput" max="65536" onchange='config_page_input("ISlope",this.value)' step="1" type="number" value="30">
                                         </div>
                                         <div class="column is-2">A/S</div>
                                     </div>
@@ -499,10 +499,10 @@
                                     <div class="columns is-mobile" id="TEnableRow">
                                         <div class="column is-2"><b>T ENABLE</b></div>
                                         <div class="column is-5">
-                                            <input class="fit TEnableInput slidercolor" max="100" onchange='setval_input("TEnable",this.value)' step="0.01" type="range" value="30" id="TEnableRange" oninput='setval_drag("TEnable",this.value)' min="0">
+                                            <input class="fit TEnableInput slidercolor" max="100" onchange='config_page_input("TEnable",this.value)' step="0.01" type="range" value="30" id="TEnableRange" oninput='config_page_slider_drag("TEnable",this.value)' min="0">
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input TEnableInput" max="100" onchange='setval_input("TEnable",this.value)' step="0.01" type="number" value="30" min="0">
+                                            <input class="input TEnableInput" max="100" onchange='config_page_input("TEnable",this.value)' step="0.01" type="number" value="30" min="0">
                                         </div>
                                         <div class="column is-2">Sec</div>
                                     </div>
