@@ -414,17 +414,20 @@
                                     </div>
                                 </div>
 
-                                <div class="column is-6" style="margin-left: 50px ;">
-                                    <div class="columns is-mobile" id="RemLastSettings">
-                                        <div class="column is-2" style="margin-left: 200px;"><b>LAST SETTINGS</b></div>
-                                        <div class="column is-5" style="width: 650px;">
-                                            <select class="input RemLastSettings InputBox" onchange='config_page_input("RemLastSettings", this.value)' style=" margin-left: 50px; width: 100px;">
-                                                <option value="off">OFF</option>
-                                                <option value="on">ON</option>    
-                                            </select>
+                                
+                                <div class="column is-6">
+                                    <div class="columns is-mobile" id="VlimRow">
+                                        <div class="column is-2"><b>OUTPUT ON DELAY</b></div>
+                                        <div class="column is-5">
+                                            <input class="fit VlimInput slidercolor" max="100" onchange='config_page_input("Vlim",this.value)' step="0.001" type="range" value="30" id="VlimRange" oninput='config_page_slider_drag("Vlim",this.value)'>
                                         </div>
+                                        <div class="column is-4">
+                                            <input class="input VlimInput" max="100" onchange='config_page_input("Vlim",this.value)' step="0.001" type="number" value="30">
+                                        </div>
+                                        <div class="column is-2">Sec</div>
                                     </div>
                                 </div>
+
                             </div>
                         
                             <div class="columns is-mobile">
@@ -440,17 +443,21 @@
                                         <div class="column is-2">A</div>
                                     </div>
                                 </div>
-                                <div class="column is-7" style="margin-left: 50px ;">
-                                    <div class="columns is-mobile" id="OutputOnDelayRow">
-                                        <div class="column is-2" style="margin-left: 200px;" ><b>OUTPUT ON DELAY</b></div>
-                                        <div class="column is-8" style="margin-top: -5px; margin-left: -24px; width: 650px;">
-                                            <select class="input InputBox" onchange='config_page_input("OutputOnDelay", this.value)' style=" margin-left: 50px; width: 100px;" >
-                                                <option value="off">OFF</option>
-                                                <option value="on">ON</option>
-                                            </select>
+                                <!-- -->
+                                
+                                 <div class="column is-6">
+                                    <div class="columns is-mobile" id="VlimRow">
+                                        <div class="column is-2"><b>DATA LOGGING</b></div>
+                                        <div class="column is-5">
+                                            <input class="fit VlimInput slidercolor" max="100" onchange='config_page_input("Vlim",this.value)' step="0.001" type="range" value="30" id="VlimRange" oninput='config_page_slider_drag("Vlim",this.value)'>
                                         </div>
+                                        <div class="column is-4">
+                                            <input class="input VlimInput" max="100" onchange='config_page_input("Vlim",this.value)' step="0.001" type="number" value="30">
+                                        </div>
+                                        <div class="column is-2">Sec</div>
                                     </div>
-                                </div>
+                                </div> 
+                                
                             </div>
                             <div class="columns is-mobile">
                                 <div class="column is-6">
@@ -466,17 +473,20 @@
                                     </div>
                                 </div>
                                
-                                <div class="column is-7" style="margin-left: 50px ;">
+                               <div class="column is-7" style="margin-left: 50px ;">
                                     <div class="columns is-mobile" id="DataLoggingRow">
-                                        <div class="column is-2" style="margin-left: 200px;"><b>DATA LOGGING</b></div>
+                                        <div class="column is-2" style="margin-left: -50px;"><b>LAST SETTING</b></div>
                                         <div class="column is-8" style="margin-top: -5px; margin-left: -24px; width: 650px;">
-                                            <select class="input InputBox" onchange='config_page_input("DataLogging", this.value)' style=" margin-left: 50px; width: 100px;">
+                                            <select class="input InputBox" onchange='config_page_input("DataLogging", this.value)' style=" margin-left: 360px; width: 260px;">
                                                 <option value="off">OFF</option>
                                                 <option value="on">ON</option>
                                             </select>
                                         </div>
                                     </div>
                                 </div>
+
+                               
+
                             </div>
 
                             <div class="columns is-mobile">
