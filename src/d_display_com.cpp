@@ -93,6 +93,7 @@ static Proto_Num_e lookup_proto(uint16_t protdata);
 extern bool Wifi_ready;
 void D_DataReceived(uint16_t wert)
 {
+  ESP.wdtFeed();	
   // wert -> 1 byte
   uint16_t packet_type;
   uint32_t cs_calc;

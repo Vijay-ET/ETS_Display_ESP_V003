@@ -247,7 +247,7 @@ void init_WS(){
 
 void WS_COM_Handler()
 {
-
+  ESP.wdtFeed();	
   if(webSocket.availableForWriteAll())          // Space in queue for further messages
   {
     for(uint8_t i = 0; i < ANZ_MSG; ++i)        // Search for the next item to send."
@@ -374,6 +374,7 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
 { 
   if(type == WS_EVT_CONNECT)
   {
+    ESP.wdtFeed();
     keep_alive = 1;
     client_connected = true;
     ++clients_num;  // V: increamenting because a client is connected.
@@ -394,6 +395,7 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
   } 
   else if(type == WS_EVT_DISCONNECT)
   {
+    ESP.wdtFeed();
     elapseTime = timer_get_time();
     // V: removing client manually
     Serial_Printing_Port.print("Client disconnected ID : ");
@@ -413,7 +415,7 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
   } 
   else if(type == WS_EVT_DATA)
   {
-    Serial_Printing_Port.println(data[0]);
+    Serial_Printing_Port.printf("\n\nData from Client : %d  %d \n\n",data[0], data[1]);
     if((source_local == SOURCE_FRONT) && (data[0] != KP_ALIVE))
     {
       source_local = SOURCE_WLAN;
@@ -503,7 +505,7 @@ void handle_Received_Message(uint8_t *data, size_t len)
 
     case SET_OCP:
       memcpy((uint8_t*)&preset.ocp, data + 1, sizeof(float));
-      if(preset.ocp == -0.01)
+      if(preset.ocp == -1)
         com_drv.Ocp = Off;
       else
         com_drv.Ocp = preset.ocp;
@@ -588,14 +590,46 @@ void handle_Received_Message(uint8_t *data, size_t len)
       com_drv.DevParam.Language = devParam.language;
       COM_SendParameter(PARAMETER);
 
+    case REMEMBER:
+      memcpy((uint8_t*)&intParam.remember, data + 1, sizeof(uint8_t));
+      com_drv.Relase = (bool)intParam.remember;
+      COM_SendParameter(RELASE);
+      break;
+
+    case TDELAY:
+      memcpy((uint8_t*)&intParam.Tdelay, data + 1, sizeof(uint8_t));
+      if(intParam.Tdelay == 0)
+        com_drv.oDelay = uOff;
+      else{
+          com_drv.oDelay = intParam.Tdelay;
+      } 
+      COM_SendParameter(ODELAY);
+      break;
+
+    case TENABLE:
+      memcpy((uint8_t*)&intParam.Tenable, data + 1, sizeof(uint8_t));
+      if(intParam.Tenable == 0)
+        com_drv.tEn = uOff;
+      else{
+        com_drv.tEn = (uint8_t)intParam.Tenable;
+      }
+      COM_SendParameter(TEN);
+      break;
+
+    case LOGGER:
+      memcpy((uint8_t*)&intParam.Logger, data + 1, sizeof(uint8_t));
+      if(intParam.Logger == 0)
+        com_drv.datalogger = uOff;
+      else{
+        com_drv.datalogger = (uint8_t)intParam.Logger;                                    
+      }
+      COM_SendParameter(DATALOGGER);
+      break;
+
     case CONTROL_P:
     case CONTROL_RI:
     case CONTROL_PV:
     case MS_STATE:
-    case REMEMBER:
-    case TDELAY:
-    case TENABLE:
-    case LOGGER:
     case DI_PARAM1:
     case DI_PARAM2:
     case DI_PARAM3:
@@ -621,6 +655,7 @@ void handle_Received_Message(uint8_t *data, size_t len)
       com_drv.local_source = (uint8_t)source_local;
       COM_SendParameter(LOCAL_SOURCE);
       break;   
+
     case KP_ALIVE:
       memcpy((uint8_t*)&keep_alive, data + 1, sizeof(uint8_t));
       if(keep_alive == 1){
@@ -1130,19 +1165,19 @@ void ws_Send_Data(Messages_e message)
         memcpy(buffer + n, (uint8_t*)&devParam, sizeof(DevParam_t));                  // V: 28 bytes
         n += sizeof(DevParam_t);
 
-        memcpy(buffer + n, (uint8_t*)&NtParam.msconfig, sizeof(MasterSlave_t));
+        memcpy(buffer + n, (uint8_t*)&NtParam.msconfig, sizeof(MasterSlave_t));       // V: 4 bytes
         n += sizeof(MasterSlave_t);
 
-        memcpy(buffer + n, (uint8_t*)&ms_available, sizeof(uint8_t));
+        memcpy(buffer + n, (uint8_t*)&ms_available, sizeof(uint8_t));                 // V: 1 byte
         n += sizeof(uint8_t);
 
-        memcpy(buffer + n, (uint8_t*)&ident, sizeof(Ident_t));
+        memcpy(buffer + n, (uint8_t*)&ident, sizeof(Ident_t));                        // V: 2 bytes
         n += sizeof(Ident_t);
 
-        memcpy(buffer + n, (uint8_t*)&compid, sizeof(Compid_t));
+        memcpy(buffer + n, (uint8_t*)&compid, sizeof(Compid_t));                      // V: 256 bytes
         n += sizeof(Compid_t);
 
-        memcpy(buffer + n, (uint8_t*)&intParam, sizeof(IntParam_t));
+        memcpy(buffer + n, (uint8_t*)&intParam, sizeof(IntParam_t));                  // V: 4 bytes.
         n += sizeof(IntParam_t);
 
         memcpy(buffer + n, (uint8_t*)&usb_active, sizeof(uint8_t));
@@ -1272,6 +1307,18 @@ void update_All_Data()
 	COM_GetParameter(UMPP_SETZ);
 	COM_GetParameter(I_LIMIT);
 	COM_GetParameter(U_LIMIT);
+  COM_GetParameter(U_SLOPE);
+  COM_GetParameter(I_SLOPE);
+  COM_GetParameter(TEN);
+  COM_GetParameter(RELASE);
+  COM_GetParameter(ODELAY);
+  COM_GetParameter(DATALOGGER);
+  COM_GetParameter(OVP);
+  COM_GetParameter(UVP);
+  COM_GetParameter(OCP);
+  COM_GetParameter(T_OCP);
+  COM_GetParameter(T_UVP);
+  COM_GetParameter(FOLDBACK);
 }
 
 void get_All_WS_data(){

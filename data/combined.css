@@ -4805,6 +4805,25 @@ input:checked+.slider:before {
     background-color: red;
 }
 
+input[type="number"]::placeholder {
+    color: dimgray;
+    font-weight: bold;
+    opacity: 1;
+}
+/* 
+.window {
+    width: 100%;
+    max-width: 800px; /* Adjust max-width as needed */
+    overflow: hidden;
+} */
 
+.logo-img {
+    width: 100%;
+    height: auto; /* Maintain aspect ratio */
+    max-height: 250px; /* Limit height */
+    object-fit: contain; /* Prevent distortion */
+    image-rendering: crisp-edges; /* Improve clarity */
+    image-rendering: -webkit-optimize-contrast; /* Webkit optimization */
+}
 
 

@@ -93,7 +93,7 @@ typedef struct
 	uint8_t Nr;		 // Eigene ID-Nr.
 	MSPartner_e ms_net_info;
 
-} MasterSlave_t;
+} MasterSlave_t;  // V: 4 bytes
 
 typedef struct
 {

@@ -60,6 +60,13 @@
 
 
 --> V003. Date :- 
+	+ Added 2 more pages in Web-Interface Configuration, Protection.
+	+ Update Set values struct in javascript with user input values from web-interface everytime they are update.
+	+ Also added the previous one to new page value inputs also.(Maybe New pages parameter input giving.)
+	+ Updated the Rmin limits to -160 milli amps
+	+ Given Restrictions for user inputs. If they we given beyond the min & max limits of respective parameters.
+	
+	Todo :-
 	+ Add the functionality to notify the STM reset is resetted. in Web-Interface.
 	+ Add cache control mechanism in the browser end so that Front-end files will be fetched faster.
 		Cache Control:
@@ -282,7 +289,7 @@ void loop(void)
 	WS_COM_Handler(); 		// V: STM data will be sent to Front-end here.
 
 	// Counter_Handler();   // V: still Figuring out
-					  		// read button funtion
+					  		// read button function
 }
 
 //==============================================================
@@ -1297,7 +1304,7 @@ void cb_com_internals_changed(Proto_Num_e dummy)
 			intParam.Tenable = 0;
 		else
 			intParam.Tenable = (uint8_t)com_drv.tEn;
-		// queue_WS_MSG(TENABLE);
+		queue_WS_MSG(TENABLE);
 		break;
 
 	case DATALOGGER:
@@ -1670,12 +1677,12 @@ void Arduino_OTA_functionality(void)
     if (ArduinoOTA.getCommand() == U_FLASH)
     {
       type = "sketch";
-	  Serial_Printing_Port.println("Filetype is Firmware.");
+	  Serial_Printing_Port.println("\nFiletype is Firmware.");
     }
     else
     {  // U_FS
       type = "filesystem";
-	  Serial_Printing_Port.println("Filetype is SPIFFS.");
+	  Serial_Printing_Port.println("\nFiletype is SPIFFS.");
     }
       // NOTE: if updating FS this would be the place to unmount FS using FS.end()
       Serial_Printing_Port.println("ETS Start updating " + type);

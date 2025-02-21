@@ -30,7 +30,7 @@ var data_flow = 0;                                  // V: Variable to monitor th
 let set_arr = ["v", "i", "p", "r", "vmpp", "impp"]; // V: currently not in use.
 
 // V: Hardware limits Structure some default limits are giving initially.
-var DevParams = { umax: 700, imax: 70, pmax: 49000, rmax: 10, rmin: 0 };
+var DevParams = { umax: 700, imax: 70, pmax: 49000, rmax: 160, rmin: -160 };
 
 // V: Preset values Structure
 var set = {
@@ -40,7 +40,6 @@ var set = {
     r: 0,
     vmpp: 0,
     impp: 0,
-    // V: down param's are not used currently.
     ovp: 0,
     uvp: 0,
     uvpT: 0,
@@ -63,6 +62,12 @@ var control = {
 var accuracy = { v: 0.005, i: 0.001, p: 0.001, r: 0.001 };
 // V: Monitor values structre
 var monitor = { v: 0, i: 0, p: 0, r: 0 };
+// V: Init param's or config page values strut
+var configuration_params = {RemLastsettings:0, Tdelay:0, TEnable:0, DataLogging:0,};
+// V: Variable to hold Foldback currently not implemented.
+var Folback = 0;
+var Vslope_max = 1, Islope_max = 1, TEnable_max = 100, OutputOnDelay_max = 100, Ovp_max = 0, Ocp_max = 0,
+    DataLogging_max = 100, Uvp_max = 0, Uvp_min = 0, UvpT_min = 100, UvpT_max = 1000, OcpT_min = 1, OcpT_max = 5000;
 
 // ------------------- ENUM Declarations ------------
 // V: Enum used to declrae which command(message) is received.
@@ -148,7 +153,8 @@ const Messages_e = {
     ANZ_MSG: 78,
   };
 
-   
+const Last_Settings_e = {OFF:0, ON:1};
+const Folback_e = {OFF:0, CV:1, CC:2, CP:3};
 const Power_e = { ON: 0, OFF: 1, OFF_PEND: 2, ON_PEND: 3 };                 // V: Enum to describe the power statem device
 const Mode_e = { VC: 0, VCP: 1, VCR: 2, PVsim: 3, User: 4, Script: 5 };     // V: Enum to describe the mode of device
 const Local_Source_e = { Local: 0, WLAN: 1 };                               // V: Enum to describe the control of device(Ambiguties currently)
@@ -156,8 +162,10 @@ const Source_e = { Front: 0, AI: 1, Remote: 2 };                            // V
 const Interlock_e = { lowAct: 0, highAct: 1 };                              // V: currenlt dont have the idea.
 const LimMode_e = { CV: 0, CC: 1, CP: 2 };                                  // V: Enum to describe the CV/CC/CP of the device
 const Fault_e = { NA: -1, Ovp: 0, Ocp: 1, Uvp: 2, Otp: 3 };                 // V: Enum to describe the Fault of the device
-const set_obj_str = ["ua", "ia", "pa", "ra", "umpp", "impp"];               // V: Enum used for Differentiating b/w the set values
 const Page_e = { NA_e: -1, Index: 0, Control: 1, Webconfig: 2, Display: 3, Protection : 4, Configuration : 5 } // V: Enum used for Differentiating b/w pages not used anymore.
+const set_obj_str = ["ua", "ia", "pa", "ra", "umpp", "impp", "Ovp", "Uvp", "UvpT", "Ocp", "OcpT", "Vslope", "Islope", "Vlim", "Ilim"];   // V: Enum used for Differentiating b/w the set values
+const Configuration_Page_strs = ["Vlim", "Ilim", "Vslope", "Islope", "TEnable", "OutputOnDelay", "DataLogging", "RemLastSettings"];
+const Protection_Page_strs = ["Ovp", "Uvp", "Ocp", "UvpT", "OcpT", "Foldback"];
 
 
 // ------------------- Variables that uses the above Const Definitions ------------
@@ -204,7 +212,7 @@ function setup()
     if(is_onboard)
     {
         ws_Connect();
-        function_id = setInterval(ws_PingPong, 4000);
+        function_id = setInterval(ws_PingPong, 3000);
     }
     else
     {
@@ -348,33 +356,89 @@ function handle_WS_Message(e)
       case Messages_e.SET_VLIM:
         set.vLim = new Float32Array(e.data.slice(1, 5))[0];
         set.vLim = parseFloat(set.vLim.toFixed(2));
+        update_configuration_page_values("Vlim",set.vLim);
         break;
 
         // V: Device Programmable Current Limit
       case Messages_e.SET_ILIM:
         set.iLim = new Float32Array(e.data.slice(1, 5))[0];
         set.iLim = parseFloat(set.iLim.toFixed(2));
+        update_configuration_page_values("Clim",set.iLim);
         break;
 
-        // V: Device Hardware limits Can't change
-      case Messages_e.DEVPARAM:
+      case Messages_e.SET_V_SL:
+        set.vSlope = new Float32Array(e.data.slice(1, 5))[0];
+        set.vSlope = parseFloat(set.vSlope.toFixed(0));
+        update_configuration_page_values("VSlope",set.vSlope);
+        break;
+
+      case Messages_e.SET_I_SL:
+        set.iSlope = new Float32Array(e.data.slice(1, 5))[0];
+        set.iSlope = parseFloat(set.iSlope.toFixed(0));
+        update_configuration_page_values("ISlope",set.iSlope);
+        break;
+
+      case Messages_e.SET_OVP:
+        set.ovp = new Float32Array(e.data.slice(1, 5))[0];
+        set.ovp = parseFloat(set.ovp.toFixed(2));
+        update_Protection_page_values("Ovp",set.ovp);
+        break;
+
+      case Messages_e.SET_UVP:
+        set.uvp = new Float32Array(e.data.slice(1, 5))[0];
+        set.uvp = parseFloat(set.uvp.toFixed(2));
+        update_Protection_page_values("Uvp",set.uvp);
+        break;
+
+      case Messages_e.SET_UVPT:
+        set.uvpT = new Float32Array(e.data.slice(1, 5))[0];
+        update_Protection_page_values("UvpT",set.uvpT);
+        break;
+
+      case Messages_e.SET_OCP:
+        set.ocp = new Float32Array(e.data.slice(1, 5))[0];
+        set.ocp = parseFloat(set.ocp.toFixed(2));
+        update_Protection_page_values("Ocp",set.ocp);
+        break;
+
+      case Messages_e.SET_OCPT:
+        set.ocpT = new Float32Array(e.data.slice(1, 5))[0];
+        update_Protection_page_values("OcpT",set.ocpT);
+        break;
+
+       // V: Device Hardware limits Can't change
+       case Messages_e.DEVPARAM:
         var s = new Float32Array(e.data.slice(9, 29));
         update_dev_params(s);
-        break;
+        break; 
   
         // V: Source of the Front. has some ambiguties.
       case Messages_e.SOURCE_LOCAL:
         user_in_local_src = local_src = new Uint8Array(e.data.slice(1, 2))[0];
         update_source(local_src);
         break;
-  
-      case Messages_e.SET_V_SL:
-      case Messages_e.SET_I_SL:
-      case Messages_e.SET_OVP:
-      case Messages_e.SET_UVP:
-      case Messages_e.SET_UVPT:
-      case Messages_e.SET_OCP:
-      case Messages_e.SET_OCPT:
+
+        // V: These down 4 values are coming as 32 bit integers, update to 8 bit if any ambiguties found.
+      case Messages_e.REMEMBER:
+        configuration_params.RemLastsettings = new Uint8Array(e.data.slice(1, 2))[0];
+        update_configuration_page_values("RemLastSettings",configuration_params.RemLastsettings);
+        break;
+
+      case Messages_e.TDELAY:
+        configuration_params.Tdelay = new Uint8Array(e.data.slice(1, 2))[0];
+        update_configuration_page_values("OutputOnDelay",configuration_params.Tdelay);
+        break;
+
+      case Messages_e.TENABLE:
+        configuration_params.TEnable = new Uint8Array(e.data.slice(1, 2))[0];
+        update_configuration_page_values("TEnable",configuration_params.TEnable);
+        break;
+
+      case Messages_e.LOGGER:
+        configuration_params.DataLogging = new Uint8Array(e.data.slice(1, 2))[0];
+        update_configuration_page_values("DataLogging",configuration_params.DataLogging);
+        break;
+
       case Messages_e.XY_AXIS:
       case Messages_e.XY_MPOS:
       case Messages_e.XY_PDATA:
@@ -400,10 +464,6 @@ function handle_WS_Message(e)
       case Messages_e.MS_STATE:
       case Messages_e.SW_ID:
       case Messages_e.CompID:
-      case Messages_e.REMEMBER:
-      case Messages_e.TDELAY:
-      case Messages_e.TENABLE:
-      case Messages_e.LOGGER:
       case Messages_e.ERR_MSG:
       case Messages_e.DI_PARAM1:
       case Messages_e.DI_PARAM2:
@@ -433,15 +493,26 @@ function handle_WS_Message(e)
         // V: This contains all data of the Device will sent for every new connection(Websocket)
       case Messages_e.ALL_DATA:
         // V: All data buffer bytes in struct wise(these down 4 are the struct's we mainly use)
-			  // 1st -> monitor struct(4 float mem's) 					= 16 bytes
-			  // 2nd -> preset struct(15 float mem's) 					= 60 bytes
-			  // 3rd -> control struct(3 inner structs of 3 floats each)	= 36 bytes
-			  // 4th -> status struct(8 uint's) 							= 8 bytes
+			  // 1st  -> monitor struct(4 float mem's) 					             = 16 bytes
+			  // 2nd  -> preset struct(15 float mem's) 					             = 60 bytes
+			  // 3rd  -> control struct(3 inner structs of 3 floats each)	   = 36 bytes
+			  // 4th  -> status struct(8 uint's) 							               = 9 bytes
+        // 5th  -> Graph param's struct(with internal struct's)        = 24 bytes
+        // 6th  -> Graph points struct                                 = 4 bytes
+        // 7th  -> Device parameters struct                            = 28 bytes
+        // 8th  -> Master slave table struct                           = 4 bytes
+        // 9th  -> MS avaialable byte                                  = 1 byte
+        // 10th -> Ident struct                                        = 2 bytes
+        // 11th -> Kompid struct                                       = 256 bytes
+        // 12th -> InitParam's struct(Remember,Tdelay,Tenable,logging)   = 4 bytes
+
         update_monitor_values(new Float32Array(e.data.slice(1, 17)));
-        var s = new Float32Array(e.data.slice(153, 173));
-        update_dev_params(s);
-        call_update_set_values_func(new Float32Array(e.data.slice(17, 77)));
+        var dev_lims = new Float32Array(e.data.slice(153, 173));
+        update_dev_params(dev_lims);
+        Update_All_Set_values_First_Time(new Float32Array(e.data.slice(17, 77)));
         Update_status(new Uint8Array(e.data.slice(113, 122)));
+        update_all_Protection_page_values_first_time(new Uint8Array(e.data.slice(441, 445)));
+        update_all_configuration_page_values_first_time();
         break;
 
         // V: Keep alive case to keep Server & Client communication persistant. 
@@ -460,29 +531,29 @@ function handle_WS_Message(e)
 // V: function that will update monitor values in the webpages
 function update_monitor_values(recv_monitor_val) 
 {
-    if (recv_monitor_val) {
-      arr_To_Obj(monitor, recv_monitor_val);
-    }
-  
-    monitor.v = parseFloat(monitor.v.toFixed(2));
-    monitor.i = parseFloat(monitor.i.toFixed(2));
-    monitor.p = parseFloat(monitor.p.toFixed(2));
-    monitor.r = parseFloat(monitor.r.toFixed(3));
+  if (recv_monitor_val) {
+    arr_To_Obj(monitor, recv_monitor_val);
+  }
 
-    // V: updating the new value in all pages.
-    document.querySelector(".uText").textContent = monitor.v;
-    document.querySelector(".iText").textContent = monitor.i;
-    document.querySelector(".pText").textContent = monitor.p;
-    document.querySelector(".rText").textContent = monitor.r;
-    document.querySelector(".mon_uText").textContent = monitor.v;
-    document.querySelector(".mon_iText").textContent = monitor.i;
-    document.querySelector(".mon_pText").textContent = monitor.p;
-    document.querySelector(".mon_rText").textContent = monitor.r;
+  monitor.v = parseFloat(monitor.v.toFixed(2));
+  monitor.i = parseFloat(monitor.i.toFixed(2));
+  monitor.p = parseFloat(monitor.p.toFixed(2));
+  monitor.r = parseFloat(monitor.r.toFixed(2));
+
+  // V: updating the new value in all pages.
+  document.querySelector(".uText").textContent = monitor.v;
+  document.querySelector(".iText").textContent = monitor.i;
+  document.querySelector(".pText").textContent = monitor.p;
+  document.querySelector(".rText").textContent = monitor.r;
+  document.querySelector(".mon_uText").textContent = monitor.v;
+  document.querySelector(".mon_iText").textContent = monitor.i;
+  document.querySelector(".mon_pText").textContent = monitor.p;
+  document.querySelector(".mon_rText").textContent = monitor.r;
 }
 
 // V: this function will be called from the ALL_DATA case 
 // V: this is used to call the update_set_values() independently for every present set value
-function call_update_set_values_func(recv_preset_val)
+function Update_All_Set_values_First_Time(recv_preset_val)
 {
 	if(recv_preset_val)
 	{
@@ -528,7 +599,7 @@ function call_update_set_values_func(recv_preset_val)
 //          V: str --> let's us know what is the values passed 
 function update_set_values(val, str)
 {
-  if ((val !== null) && (str !== null)) 
+  if (str !== null)
   {
     switch (str) {
       case "ua":
@@ -592,6 +663,7 @@ function update_dev_params(recv_devparam)
 		DevParams.rmax = parseFloat(DevParams.rmax.toFixed(2));
 		DevParams.rmin = parseFloat(DevParams.rmin.toFixed(2));
 
+    // V: Below lines are for updating limits in control page.
     // V: update voltage lim value
     document.getElementById("uRange").max = DevParams.umax;
     document.querySelector('input[type="number"].uaInput').max = DevParams.umax;
@@ -615,6 +687,65 @@ function update_dev_params(recv_devparam)
     // V: update Impp lim value
     document.getElementById("imppRange").max = DevParams.imax;
     document.querySelector('input[type="number"].imppInput').max = DevParams.imax;
+
+    // V: Update local variables based on devparam's
+    Vslope_max = (DevParams.umax * 100);
+    Islope_max = (DevParams.imax * 100);
+    Ovp_max    = (DevParams.umax * 1.2);
+    Uvp_max    = DevParams.umax;
+    Ocp_max    = DevParams.imax;
+
+
+    // V: Below lines are for updating limits in Configuartion page
+    // V: Update V Limit max value
+    document.getElementById("VlimRange").max = DevParams.umax;
+    document.querySelector('input[type="number"].VlimInput').max =DevParams.umax;
+
+    // V: Update C limit max limits
+    document.getElementById("ClimRange").max = DevParams.imax;
+    document.querySelector('input[type="number"].ClimInput').max =DevParams.imax;
+
+    // V: Update Vslope max limits
+    document.getElementById("VSlopeRange").max = Vslope_max;
+    document.querySelector('input[type="number"].VSlopeInput').max = Vslope_max;
+
+    // V: Update Islope max limits
+    document.getElementById("ISlopeRange").max = Islope_max;
+    document.querySelector('input[type="number"].ISlopeInput').max = Islope_max;
+
+    // V: Update TEnable max limits
+    document.getElementById("TEnableRange").max = TEnable_max;
+    document.querySelector('input[type="number"].TEnableInput').max = TEnable_max;
+
+    // V: Update OutputOnDelayRange max limits
+    document.getElementById("OutputOnDelayRange").max = OutputOnDelay_max;
+    document.querySelector('input[type="number"].OutputOnDelayInput').max = OutputOnDelay_max;
+
+    // V: Update DataLogging max limits
+    document.getElementById("DataLoggingRange").max = DataLogging_max;
+    document.querySelector('input[type="number"].DataLoggingInput').max = DataLogging_max;
+
+
+    // V: Below lines are for updating limits in Protection page
+    // V: Update Ovp max limits
+    document.getElementById("OvpRange").max = Ovp_max;
+    document.querySelector('input[type="number"].OvpInput').max = Ovp_max;
+
+    // V: Update Uvp max limits
+    document.getElementById("UvpRange").max = Uvp_max;
+    document.querySelector('input[type="number"].UvpInput').max = Uvp_max;
+
+    // V: Update Ocp max limits
+    document.getElementById("OcpRange").max = Ocp_max;
+    document.querySelector('input[type="number"].OcpInput').max = Ocp_max;
+
+    // V: Update UvpT max limits
+    document.getElementById("UvpTRange").max = UvpT_max;
+    document.querySelector('input[type="number"].UvpTInput').max = UvpT_max;
+
+    // V: Update OcpT max limits
+    document.getElementById("OcpTRange").max = OcpT_max;
+    document.querySelector('input[type="number"].OcpTInput').max = OcpT_max;
 	}
 }
 
@@ -778,7 +909,204 @@ function update_source(src)
       break;
   }
 }
-  
+
+// V: function that will update All Configuration page values for first time when DOM is loaded
+function update_all_configuration_page_values_first_time()
+{
+  update_configuration_page_values("Vlim", set.vLim);
+  update_configuration_page_values("Clim", set.iLim);
+  update_configuration_page_values("VSlope", set.vSlope);
+  update_configuration_page_values("ISlope", set.vSlope);
+  update_configuration_page_values("TEnable", configuration_params.TEnable);
+  update_configuration_page_values("RemLastSettings", configuration_params.RemLastsettings);
+  update_configuration_page_values("OutputOnDelay", configuration_params.Tdelay);
+  update_configuration_page_values("DataLogging", configuration_params.DataLogging);
+}
+
+// V: function that will update configuration page values
+function update_configuration_page_values(str,val)
+{
+  if(!str)
+  {
+    return;
+  }
+
+  // val = val & 0xFF; // V: Converting IEEE representation to 32 bit representation.
+  switch(str)
+  {
+    case "Vlim":
+      document.getElementById("VlimRange").value = val;
+      document.querySelector('input[type="number"].VlimInput').value = val;
+    break;
+
+    case "Clim":
+      document.getElementById("ClimRange").value = val;
+      document.querySelector('input[type="number"].ClimInput').value = val;
+    break;
+
+    case "VSlope":
+      document.getElementById("VSlopeRange").value = val;
+      if(val <= 0)
+      {
+        document.querySelector('input[type="number"].VSlopeInput').value = "";
+        document.querySelector('input[type="number"].VSlopeInput').placeholder = "Off";
+      }
+      else{
+        document.querySelector('input[type="number"].VSlopeInput').placeholder = "";
+        document.querySelector('input[type="number"].VSlopeInput').value = val;
+      }
+      
+    break;
+
+    case "ISlope":
+      document.getElementById("ISlopeRange").value = val;
+      if(val <= 0)
+      {
+        document.querySelector('input[type="number"].ISlopeInput').value = "";
+        document.querySelector('input[type="number"].ISlopeInput').placeholder = "Off";
+      }
+      else
+      {
+        document.querySelector('input[type="number"].ISlopeInput').placeholder = "";
+        document.querySelector('input[type="number"].ISlopeInput').value = val;
+      }
+    break;
+
+    case "TEnable":
+      document.getElementById("TEnableRange").value = val;
+      if(val <= 0)
+      {
+        document.querySelector('input[type="number"].TEnableInput').value = "";
+        document.querySelector('input[type="number"].TEnableInput').placeholder = "Infinite";
+      }
+      else
+      {
+        document.querySelector('input[type="number"].TEnableInput').placeholder = "";
+        document.querySelector('input[type="number"].TEnableInput').value = val;
+      }
+    break;
+
+    case "RemLastSettings":
+      if(val)
+      {
+        document.getElementById("RemLastSettingsRow").value = "On";
+      }
+      else
+      {
+        document.getElementById("RemLastSettingsRow").value = "Off";
+      }
+    break;
+
+    case "OutputOnDelay":
+      document.getElementById("OutputOnDelayRange").value = val;
+      if(val <= 0)
+      {
+        document.querySelector('input[type="number"].OutputOnDelayInput').value = "";
+        document.querySelector('input[type="number"].OutputOnDelayInput').placeholder = "Off";
+      }
+      else
+      {
+        document.querySelector('input[type="number"].OutputOnDelayInput').placeholder = "";
+        document.querySelector('input[type="number"].OutputOnDelayInput').value = val;
+      }
+    break;
+
+    case "DataLogging":
+      document.getElementById("DataLoggingRange").value = val;
+      if(val <= 0)
+      {
+        document.querySelector('input[type="number"].DataLoggingInput').value = "";
+        document.querySelector('input[type="number"].DataLoggingInput').placeholder = "Off";
+      }
+      else
+      {
+        document.querySelector('input[type="number"].DataLoggingInput').value = val;
+        document.querySelector('input[type="number"].DataLoggingInput').placeholder = "";
+      }
+    break;
+
+    default:
+    break;
+  }
+}
+
+// V: function that will update all Protection page values for the first time when DOM is loaded.
+function update_all_Protection_page_values_first_time(InitParams_data)
+{
+  if(InitParams_data)
+  {
+    arr_To_Obj(configuration_params,InitParams_data);
+  }
+  update_Protection_page_values("Ovp",set.ovp);
+  update_Protection_page_values("Uvp",set.uvp);
+  update_Protection_page_values("Ocp",set.ocp);
+  update_Protection_page_values("UvpT",set.uvpT);
+  update_Protection_page_values("OcpT",set.ocpT);
+  // update_Protection_page_values("Foldback",set.ovp); // V: currently no command implemented.
+}
+
+// V: function that will update the Protection page values
+function update_Protection_page_values(protection_str,protection_val)
+{
+  if(!protection_str)
+  {
+    return;
+  }
+
+  switch(protection_str)
+  {
+    case "Ovp":
+      document.getElementById("OvpRange").value = protection_val;
+      document.querySelector('input[type="number"].OvpInput').value = protection_val;
+      break;
+
+    case "Uvp":
+      document.getElementById("UvpRange").value = protection_val;
+      if(protection_val == -1)
+      {
+        document.querySelector('input[type="number"].UvpInput').placeholder = "Off";
+        document.querySelector('input[type="number"].UvpInput').value = "";
+      }
+      else
+      {
+        document.querySelector('input[type="number"].UvpInput').value = protection_val;
+        document.querySelector('input[type="number"].UvpInput').placeholder = "";
+      }
+      break;
+
+    case "Ocp":
+      document.getElementById("OcpRange").value = protection_val;
+      if(protection_val == -1)
+      {
+        document.querySelector('input[type="number"].OcpInput').value = "";
+        document.querySelector('input[type="number"].OcpInput').placeholder = "Off";
+      }
+      else
+      {
+        document.querySelector('input[type="number"].OcpInput').value = protection_val;
+        document.querySelector('input[type="number"].OcpInput').placeholder = "";
+      }
+      break;
+
+    case "UvpT":
+      document.getElementById("UvpTRange").value = protection_val;
+      document.querySelector('input[type="number"].UvpTInput').value = protection_val;
+      break;
+
+    case "OcpT":
+      document.getElementById("OcpTRange").value = protection_val;
+      document.querySelector('input[type="number"].OcpTInput').value = protection_val;
+      break;
+
+    case "Foldback":
+      document.getElementById("foldbackRow").value = protection_val;
+      break;
+
+    default:
+      break;
+
+  }
+}
 
 // --------------- User input functions will be called directly inline from HTML --------------
 // --------------- Aslo Event Listener Functions ----------------------------------------------
@@ -877,9 +1205,11 @@ function Local_btn_click()
 // V: Function that will be called when Preset value input is entered.
 function setval_input(str, val)
 {
-  // V: Value can be 0 Sometimes that'why chceking only recvived string
-	if(!str)
+  // V: Checking if passed parameters are valid or not.
+	if(!str && !isFinite(val))
 	{
+    console.log("Invalid input : " + val);
+    Error_Message("Please provide a valid input.");
     return;
   }
 
@@ -891,9 +1221,11 @@ function setval_input(str, val)
       if (val >= set.vLim) {
         val = set.vLim;
       }
-      else if (val >= DevParams.umax) {
-        val = DevParams.umax;
+      else if(val <= 0.0)
+      {
+        val = 0;
       }
+      set.v = val;
       update_set_values(val, str);
       break;
 
@@ -902,9 +1234,11 @@ function setval_input(str, val)
       if (val >= set.iLim) {
         val = set.iLim;
       }
-      else if (val >= DevParams.imax) {
-        val = DevParams.imax;
+      else if(val <= 0.0)
+      {
+        val = 0;
       }
+      set.i = val;
       update_set_values(val, str);
       break;
 
@@ -913,6 +1247,11 @@ function setval_input(str, val)
       if (val >= DevParams.pmax) {
         val = DevParams.pmax;
       }
+      else if(val <= 0)
+      {
+        val = 0;
+      }
+      set.p = val;
       update_set_values(val, str);
       break;
 
@@ -921,16 +1260,37 @@ function setval_input(str, val)
       if (val >= DevParams.rmax) {
         val = DevParams.rmax;
       }
+      else if(val <= DevParams.rmin)
+      {
+        val = DevParams.rmin;
+      }
+      set.r = val;
       update_set_values(val, str);
       break;
 
     case 'umpp':
+      // V: Umpp min = (10 * set voltage)/19;
+      // V: Umpp max = 0.95 * set voltage;
       sendarr = Uint8Array.of(Messages_e.SET_VMPP);
+      if(val >= (0.95 * set.v))
+        val = 0.95 * set.v;
+      else if(val <= (10 * set.v)/19)
+        val = (10 * set.v)/19;
+      val = val.toFixed(2);
+      set.vmpp = val;
       update_set_values(val, str);
       break;
 
     case 'impp':
+      // V: Impp min = (10 * set current)/19;
+      // V: Impp max = 0.95 * set current;
+      if(val >= (0.95 * set.i))
+        val = 0.95 * set.i;
+      else if(val <= (10 * set.i)/19)
+        val = (10 * set.i)/19;
+      val = val.toFixed(2);
       sendarr = Uint8Array.of(Messages_e.SET_IMPP);
+      set.impp = val;
       update_set_values(val, str);
       break;
 
@@ -975,157 +1335,252 @@ function setval_drag(str, val)
 
 // ----------------------->   Configuration Pages Input Functions   <---------   
 // V: function that will be called when configuration parameters are changing.
-function config_page_input(str,val)
+function config_page_input(config_str,config_val)
 {
-  if(!str)
+  if(!isFinite(config_val))
   {
+    Error_Message("Please provide a valid input.");
     return;
   }
-
-  switch(str)
+  var send_cmd_config = null;
+  switch(config_str)
   {
     case "Vlim":
+      if (config_val >= DevParams.umax)
+        config_val = DevParams.umax;
+      else if(config_val <= 0.0)
+        config_val = 0.0;
+      send_cmd_config = Uint8Array.of(Messages_e.SET_VLIM);
+      set.vLim = config_val;
+      // V: updating set volatage immediately if Vlimit is changed.
+      if(set.v >= set.vLim)
+        set.v = set.vLim;
+      update_set_values(set.v, "ua");
     break;
 
     case "Clim":
+      if (config_val >= DevParams.imax)
+        config_val = DevParams.imax;
+      else if(config_val <= 0.00)
+        config_val = 0.00;
+      send_cmd_config = Uint8Array.of(Messages_e.SET_ILIM);
+      set.iLim = config_val;
+      // V: updating set current immediately if Climit is changed.
+      if(set.i >= set.iLim)
+        set.i = set.iLim;
+      update_set_values(set.i, "ia");
     break;
 
     case "VSlope":
+      if(config_val >= Vslope_max)
+        config_val = Vslope_max;
+      else if(config_val <= 0)    // V: converting to 32 bit representation where -1 will be all 1's
+        config_val = 0;
+      send_cmd_config = Uint8Array.of(Messages_e.SET_V_SL);
+      set.vSlope = config_val;
     break;
 
     case "ISlope":
+      if(config_val >= Islope_max)
+        config_val = Islope_max;
+      else if(config_val <= 0)    
+        config_val = 0;
+      send_cmd_config = Uint8Array.of(Messages_e.SET_I_SL);
+      set.iSlope = config_val;
     break;
 
     case "TEnable":
+      if(config_val >= TEnable_max)
+        config_val = TEnable_max;
+      else if(config_val <= 0)    
+        config_val = 0;
+      send_cmd_config = Uint8Array.of(Messages_e.TENABLE);
+      configuration_params.TEnable = config_val;
     break;
 
     case "RemLastSettings":
+      send_cmd_config = Uint8Array.of(Messages_e.REMEMBER);
+      if(config_val == "On")
+      {
+        configuration_params.RemLastsettings = Last_Settings_e.ON;
+        config_val = Last_Settings_e.ON;
+      }
+      else
+      {
+        configuration_params.RemLastsettings = Last_Settings_e.OFF;
+        config_val = Last_Settings_e.OFF;
+      }
     break;
 
     case "OutputOnDelay":
+      if(config_val >= OutputOnDelay_max)
+        config_val = OutputOnDelay_max;
+      else if(config_val <= 0)    
+        config_val = 0;
+      send_cmd_config = Uint8Array.of(Messages_e.TDELAY);
+      configuration_params.Tdelay = config_val;
     break;
 
     case "DataLogging":
+      if( config_val >= DataLogging_max)
+        config_val = DataLogging_max;
+      else if(config_val <= 0)    
+        config_val = 0;
+      send_cmd_config = Uint8Array.of(Messages_e.LOGGER);
+      configuration_params.DataLogging = config_val;
     break;
 
     default:
     break;
   }
+  update_configuration_page_values(config_str,config_val);
+  ws.send(concatBuffers(send_cmd_config, Float32Array.of(config_val)));
 }
 
 // V: function that will be called when config page sliders are dragged.
-function config_page_slider_drag(str,val)
+function config_page_slider_drag(config_slider_str,config_slider_val)
 {
-  if(!str)
+  if(!config_slider_str)
   {
     return;
   }
 
-  switch(str)
+  switch(config_slider_str)
   {
     case "Vlim":
-      document.querySelector('input[type="number"].VlimInput').value = val;
+      document.querySelector('input[type="number"].VlimInput').value = config_slider_val;
       break;
     
     case "Clim":
-      document.querySelector('input[type="number"].ClimInput').value = val;
+      document.querySelector('input[type="number"].ClimInput').value = config_slider_val;
       break;
   
     case "VSlope":
-      document.querySelector('input[type="number"].VSlopeInput').value = val;
+      document.querySelector('input[type="number"].VSlopeInput').value = config_slider_val;
     break;
 
     case "ISlope":
-      document.querySelector('input[type="number"].ISlopeInput').value = val;
+      document.querySelector('input[type="number"].ISlopeInput').value = config_slider_val;
     break;
 
     case "TEnable":
-      document.querySelector('input[type="number"].TEnableInput').value = val;
+      document.querySelector('input[type="number"].TEnableInput').value = config_slider_val;
     break;
 
     case "OutputOnDelay":
-      document.querySelector('input[type="number"].ClimInput').value = val;
+      document.querySelector('input[type="number"].OutputOnDelayInput').value = config_slider_val;
     break;
 
     case "DataLogging":
-      document.querySelector('input[type="number"].ClimInput').value = val;
+      document.querySelector('input[type="number"].DataLoggingInput').value = config_slider_val;
     break;
 
     default:
     break;
   }
 }
-
 
 // ----------------->    Protection page input functions    <--------------
-// V: function that will be called when protection parameters are changed.
-function Protection_page_input(str,val)
+// V: function that will be called when protection page value input has come
+function Protection_page_input(protection_str,protection_val)
 {
-  if(!str)
+  if(!protection_str)
   {
     return;
   }
-
-  switch(str)
+  var send_cmd_protection = null;
+  switch(protection_str)
   {
     case "Ovp":
-    break;
+      if(protection_val >= Ovp_max)
+        protection_val = Ovp_max;
+      else if(protection_val <= 0.00)
+        protection_val = 0.00;
+      send_cmd_protection = Uint8Array.of(Messages_e.SET_OVP);
+      set.ovp = protection_val;
+      break;
 
     case "Uvp":
-    break;
+      if(protection_val >= Uvp_max)
+        protection_val = Uvp_max;
+      else if(protection_val <= 0.0)
+        protection_val = -1;
+      send_cmd_protection = Uint8Array.of(Messages_e.SET_UVP);
+      set.uvp = protection_val;
+      break;
 
     case "Ocp":
-    break;
+      if(protection_val >= Ocp_max)
+        protection_val = Ocp_max;
+      else if(protection_val <= 0.00)
+        protection_val = -1;
+      send_cmd_protection = Uint8Array.of(Messages_e.SET_OCP);
+      set.ocp = protection_val;
+      break;
 
     case "UvpT":
-    break;
+      if(protection_val >= UvpT_max)
+        protection_val = UvpT_max
+      else if(protection_val <= 100)
+        protection_val = 100;
+      send_cmd_protection = Uint8Array.of(Messages_e.SET_UVPT);
+      set.uvpT = protection_val;
+      break;
 
     case "OcpT":
-    break;
+      if(protection_val >= OcpT_max)
+        protection_val = OcpT_max;
+      else if(protection_val <= 1)
+        protection_val = 1;
+      send_cmd_protection = Uint8Array.of(Messages_e.SET_OCPT);
+      set.ocpT = protection_val;
+      break;
 
     case "Foldback":
-    break;
+      // V: Currently command is not there. Implement later.
+      break;
 
     default:
-    break;
+      break;
   }
+  update_Protection_page_values(protection_str,protection_val);
+  ws.send(concatBuffers(send_cmd_protection, Float32Array.of(protection_val)));
 }
 
-// V: function that will be called when protection page sliders are dragged.
-function protection_page_slider_drag(str,val)
+// V: function that will be called when protection page sliders are dragged
+function protection_page_slider_drag(protection_slider_str,protection_slider_val)
 {
-  if(!str)
+  if(!protection_slider_str)
   {
     return;
   }
 
-  switch(str)
+  switch(protection_slider_str)
   {
     case "Ovp":
-      document.querySelector('input[type="number"].OvpInput').value = val;
-    break;
+      document.querySelector('input[type="number"].OvpInput').value = protection_slider_val;
+      break;
 
     case "Uvp":
-      document.querySelector('input[type="number"].UvpInput').value = val;
-    break;
+      document.querySelector('input[type="number"].UvpInput').value = protection_slider_val;
+      break;
 
     case "Ocp":
-      document.querySelector('input[type="number"].OcpInput').value = val;
-    break;
+      document.querySelector('input[type="number"].OcpInput').value = protection_slider_val;
+      break;
 
     case "UvpT":
-      document.querySelector('input[type="number"].UvpTInput').value = val;
-    break;
+      document.querySelector('input[type="number"].UvpTInput').value = protection_slider_val;
+      break;
 
     case "OcpT":
-      document.querySelector('input[type="number"].OcpTInput').value = val;
-    break;
+      document.querySelector('input[type="number"].OcpTInput').value = protection_slider_val;
+      break;
 
     default:
-    break;
+      break;
   }
 }
-
 
 // --------------- Websocket Send function definitions --------------
 
@@ -1153,7 +1608,7 @@ function Send_Status_Struct()
 }
 
 
-// --------------- Additional Support function definitions --------------
+// --------------->   Additional Support function definitions   <--------------
 
 // V: Funtion that is used to switch pages but not used any more
 function switch_page(page) 
@@ -1235,3 +1690,10 @@ function concatBuffers(a, b) {	// buffers of differtent TypedArrays
 function concatBytes(ui8a, byte) {
 	return concatTypedArrays(ui8a, Uint8Array.of(byte));
 }
+
+// V: Function that will print error message if something happens.
+function Error_Message(message) {
+  document.getElementById("errorMessage").innerText = message;
+  document.getElementById("errorModal").style.display = "block";
+}
+

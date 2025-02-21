@@ -251,7 +251,7 @@ typedef struct
 	uint8_t interlock = false;
 	uint8_t LocalLockout = false;
 	uint8_t fault = NA;
-} Status_t; // V: 8 Bytes
+} Status_t; // V: 9 Bytes
 
 typedef struct
 {				 // V: I think one Variable will be created of this type for every mem of control_t Struct
