@@ -205,6 +205,7 @@ Serial_Printing_Port.println("Wi-Fi initialisations completed.");
 
 //Init Websocket
 void init_WS(){
+  webSocket.cleanupClients();
   webSocket.onEvent(on_WebSocket_Event);
   server.addHandler(&webSocket);
 
@@ -216,18 +217,24 @@ void init_WS(){
         // request->send(response);
         
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    ESP.wdtFeed();
+    Serial_Printing_Port.println("\n\n Received HTTP Request. Serving the Webcontents.\n\n");
     request->send(SPIFFS, "/combined.html", String(), false);
   });
   server.on("/combined.css", HTTP_GET, [](AsyncWebServerRequest *request){
+     ESP.wdtFeed();
     request->send(SPIFFS, "/combined.css", "text/css");
   });
   server.on("/fnt/robotoV20LaExLaReg.woff2", HTTP_GET, [](AsyncWebServerRequest *request){
+     ESP.wdtFeed();
     request->send(SPIFFS, "/fnt/robotoV20LaExLaReg.woff2", "font/woff2");
   });
   server.on("/Script.js", HTTP_GET, [](AsyncWebServerRequest *request){
+     ESP.wdtFeed();
     request->send(SPIFFS, "/Script.js", "text/javascript");  
   });
   server.on("/etLogo.webp", HTTP_GET, [](AsyncWebServerRequest *request){
+     ESP.wdtFeed();
     request->send(SPIFFS, "/etLogo.webp", "image/webp");
   });
  
@@ -254,7 +261,7 @@ void WS_COM_Handler()
     {
       if(msgPrio.prio[i] == msgPrio.toSend)     // V: this will be set previously in queue_WS_MSG(). that is called in callback functions
       {
-        ws_Send_Data((Messages_e)i);            // V: calling the function that will send Info to Web-Socket
+        ws_Send_Data((Messages_e)i);            // V: calling the function that will send data to Web-Socket
                                                 // V: is used to send a binary message to all clients connected to an AsyncWebSocket
         msgPrio.prio[i] = 0xFF; 
         msgPrio.toSend = ++msgPrio.toSend & MSG_PRIO_LENGTH_MASK;   // V: 
@@ -262,36 +269,40 @@ void WS_COM_Handler()
       }
     }
   }
-  // webSocket.cleanupClients();
+  ESP.wdtFeed();
 
   //Send ping to WS 
   if(server_running){
     if(keep_alive && client_connected){  
       //send PingPong message after 5s
       if(got_response){
-        if(timer_get_time() - elapseTime1 > 4000){
-          Serial_Printing_Port.print("Clients Connected : ");
+        if(timer_get_time() - elapseTime1 >= 5000){
+          Serial_Printing_Port.print("\nClients Connected : ");
           Serial_Printing_Port.println(clients_num);
           elapseTime1 = timer_get_time();
           queue_WS_MSG(KP_ALIVE);
+          // got_response = false;
         }
-        //check ping pong after 10s
-        if(timer_get_time() - elapseTime > 10000){
+        // check ping pong after 8s
+        if(timer_get_time() - elapseTime >= 10000){
           elapseTime = timer_get_time();
           got_response = false;            
         }
       }
       else{
         //restart after 20s
-        if(timer_get_time() - elapseTime > 20000){
+        if(timer_get_time() - elapseTime >= 20000){
           elapseTime = timer_get_time();
-          Serial_Printing_Port.println("no response");
+          Serial_Printing_Port.println("\n\n---------> No Response. <-----------\n");
           keep_alive = 0;
           // server_running = false;
-          client_connected = false;
-          clients_num = 0;
+          clients_num--;
+          if(!clients_num)
+          {
+            client_connected = false;
+          }
           // V: function for clearing websockets when response didn't came in time
-          // 
+          webSocket.cleanupClients(clients_num);
         }
       }
     }
@@ -308,12 +319,14 @@ void WS_COM_Handler()
         // server_running = false;
         client_connected = false;
         Serial_Printing_Port.println("WS timeout !");
+        webSocket.cleanupClients(clients_num);
       }
     }
     else{  //keep_alive && !client_connected
         server_running = false;
         Serial_Printing_Port.println("WS Closed !! ");
-        init_WS();
+        webSocket.cleanupClients(clients_num);
+        // init_WS();
     }
   }
   else{
@@ -380,7 +393,7 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
     ++clients_num;  // V: increamenting because a client is connected.
     update_All_Data();
     queue_WS_MSG(KP_ALIVE);
-    delay(5);
+    // delay(3);
     queue_WS_MSG(ALL_DATA);
     elapseTime = timer_get_time();
     source_local = SOURCE_WLAN;
@@ -415,7 +428,6 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
   } 
   else if(type == WS_EVT_DATA)
   {
-    Serial_Printing_Port.printf("\n\nData from Client : %d  %d \n\n",data[0], data[1]);
     if((source_local == SOURCE_FRONT) && (data[0] != KP_ALIVE))
     {
       source_local = SOURCE_WLAN;
@@ -444,6 +456,8 @@ else
 // V: and that will be callled Intially in the init_ws() Function
 void handle_Received_Message(uint8_t *data, size_t len)  
 {
+  ESP.wdtFeed();
+  // Serial_Printing_Port.printf("\nData command from Client is : %d\n",data[0]);
   switch(data[0]) // Messages_e
   {
     case SET_V:
@@ -659,12 +673,21 @@ void handle_Received_Message(uint8_t *data, size_t len)
     case KP_ALIVE:
       memcpy((uint8_t*)&keep_alive, data + 1, sizeof(uint8_t));
       if(keep_alive == 1){
+        client_connected = true;
         got_response = true;
-        // queue_WS_MSG(KP_ALIVE);
-#ifdef DEBUG_MESSAGES_ACTIVE
-        Serial_Printing_Port.println("I am Alive from Client.");
+        Serial_Printing_Port.println("Pong from client <--");
         Serial_Printing_Port.println("");
-#endif
+      }
+      else if(keep_alive == CLOSE_WS)
+      {
+        keep_alive = false;
+        Serial_Printing_Port.println("\n Received closing Request.\n");
+        webSocket.cleanupClients(clients_num);
+        clients_num--;
+        if(!clients_num)
+        {
+          client_connected = false;
+        }
       }
       break;
       
@@ -702,6 +725,7 @@ void handle_Received_Message(uint8_t *data, size_t len)
 // V: This is the Actual Function Sending Information to the Front-End Through Web Sockets
 void ws_Send_Data(Messages_e message)
 {
+  ESP.wdtFeed();
   uint8_t buffer[SEND_BUFFER_SIZE];   // 257 * 4 + 1 = 1029 Bytes
   uint8_t usb_err = 0xE6;
 
@@ -1198,7 +1222,7 @@ void ws_Send_Data(Messages_e message)
       buffer[0] = KP_ALIVE;
       memcpy(buffer + 1, (uint8_t*)&keep_alive, sizeof(uint8_t));
       webSocket.binaryAll(buffer, sizeof(uint8_t) + 1);
-      Serial_Printing_Port.println("Hey client Are you there ?");
+      Serial_Printing_Port.println("Ping to client --> ");
       Serial_Printing_Port.println("");
       break;
 	  

@@ -64,7 +64,8 @@
 	+ Update Set values struct in javascript with user input values from web-interface everytime they are update.
 	+ Also added the previous one to new page value inputs also.(Maybe New pages parameter input giving.)
 	+ Updated the Rmin limits to -160 milli amps
-	+ Given Restrictions for user inputs. If they we given beyond the min & max limits of respective parameters.
+	+ Given Restrictions for user inputs. If given beyond the min & max limits of respective parameters.
+	+ Given Titles to notify users how to turn of particular Fetaure. when mouse is taken near that input text box.
 	
 	Todo :-
 	+ Add the functionality to notify the STM reset is resetted. in Web-Interface.
@@ -72,7 +73,7 @@
 		Cache Control:
 
 		You might want to include a Cache-Control header to optimize how browsers cache the file. For example, if the file doesn't change often, 
-		you could tell browsers to cache it for a longer period.
+		you could tell browsers to cache it for a longer period.s
 		Copy code
 			AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/combined.html", "text/html");
 			response->addHeader("Cache-Control", "max-age=3600");  // Cache for 1 hour
@@ -1271,6 +1272,14 @@ void cb_com_setz_changed(Proto_Num_e num)
 	case I_LIMIT:
 		preset.iLim = com_drv.I_limit;
 		queue_WS_MSG(SET_ILIM);
+		break;
+	
+	case FOLDBACK:
+		// V: Write the logic afterwards
+		break;
+	
+	case FOLDBACKTM:
+		// V: Write logic afterwards.
 		break;
 
 	default:

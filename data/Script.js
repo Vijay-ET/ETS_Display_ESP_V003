@@ -20,7 +20,7 @@ keep_alive = 1,
 keep_alive_count = 0,
 got_response = 0;
 
-var is_onboard = false;   // V: true  -> Onboard data flow will be continous
+var is_onboard = true;   // V: true  -> Onboard data flow will be continous
                           //    false -> Dev-kit data will not flow.
 
 
@@ -153,6 +153,7 @@ const Messages_e = {
     ANZ_MSG: 78,
   };
 
+const Websocket_com_e = {NI:-1, DEAD:0, ALIVE:1, NO_DATA:2, CLOSE_WS:3};
 const Last_Settings_e = {OFF:0, ON:1};
 const Folback_e = {OFF:0, CV:1, CC:2, CP:3};
 const Power_e = { ON: 0, OFF: 1, OFF_PEND: 2, ON_PEND: 3 };                 // V: Enum to describe the power statem device
@@ -195,12 +196,13 @@ window.onload = setup;
 // V: Adding a event listener when webpage is closing so that 
 window.addEventListener("beforeunload", function() {
     closeWebSocket();
+    console.log("Event listener before closing the page.");
 });
 
 // V: function to close the websocket 
 function closeWebSocket() {
     if (ws) {
-        console.log("Deleting Websocket");
+      ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(Websocket_com_e.CLOSE_WS)));
         ws.close();
     }
 }
@@ -212,7 +214,7 @@ function setup()
     if(is_onboard)
     {
         ws_Connect();
-        function_id = setInterval(ws_PingPong, 3000);
+        function_id = setInterval(ws_PingPong, 5000);
     }
     else
     {
@@ -227,14 +229,17 @@ function ws_Connect()
   console.log("connecting to Websocket...");
   ws.binaryType = "arraybuffer";
   ws.onopen = function () {
-    console.log("WebSocket connected.");
-    if (is_onboard) {
-      function_id2 = setInterval(Check_data_flow, 2200);
-    }
+  console.log("WebSocket connected.");
+  send_keepAlive();
+    // if (is_onboard) {
+    //   function_id2 = setInterval(Check_data_flow, 2200);
+    // }
   };
 
   ws.onclose = function () {
     console.log("Socket is getting closed.");
+    ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(Websocket_com_e.CLOSE_WS)));
+    ws.close();
   };
 
   ws.onmessage = function (data) {
@@ -247,12 +252,12 @@ function ws_Connect()
   };
 
   ws.onerror = function () {
-    //alert("Error in WLAN communication \nPlease check if WLAN is Connected.");
+    //showError("Error in WLAN communication \nPlease check if WLAN is Connected.");
     ws.close();
   };
 }
 
-// V: function that will be called for every 4 seconds to send keep_alive to server.
+// V: function that will be called for every 5 seconds to send keep_alive to server.
 function ws_PingPong() {
     if (got_response) 
     {
@@ -267,8 +272,11 @@ function ws_PingPong() {
       if (nopong_cnt >= 2) 
       {
         clearInterval(function_id);
-        alert("There is no connection to the WLAN access point \nPlease check if WLAN is enabled.");
-        window.location.reload();
+        showError("Error in WLAN communication. \nPlease check if WLAN is enabled.");
+        ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(Websocket_com_e.CLOSE_WS)));
+        ws.close();
+        // setup();
+        // window.location.reload();
       } 
       else 
       {
@@ -518,6 +526,7 @@ function handle_WS_Message(e)
         // V: Keep alive case to keep Server & Client communication persistant. 
       case Messages_e.KP_ALIVE:
         if (t[1] == 1) {
+          console.log("Ping from Server <-- ");
           keep_alive = t[1];
           got_response = true;
         }
@@ -676,9 +685,13 @@ function update_dev_params(recv_devparam)
     document.getElementById("pRange").max = DevParams.pmax;
     document.querySelector('input[type="number"].paInput').max = DevParams.pmax;
 
-    // V: update resistance lim value
+    // V: update resistance higher lim value
     document.getElementById("rRange").max = DevParams.rmax;
     document.querySelector('input[type="number"].raInput').max = DevParams.rmax;
+
+    // V: Update resistance lower lim value
+    document.getElementById("rRange").min = DevParams.rmin;
+    document.querySelector('input[type="number"].raInput').min = DevParams.rmin;
 
     // V: update Vmpp lim value
     document.getElementById("umppRange").max = DevParams.umax;
@@ -703,7 +716,7 @@ function update_dev_params(recv_devparam)
 
     // V: Update C limit max limits
     document.getElementById("ClimRange").max = DevParams.imax;
-    document.querySelector('input[type="number"].ClimInput').max =DevParams.imax;
+    document.querySelector('input[type="number"].ClimInput').max = DevParams.imax;
 
     // V: Update Vslope max limits
     document.getElementById("VSlopeRange").max = Vslope_max;
@@ -839,12 +852,7 @@ function Update_status(recv_status)
         document.querySelector(".modeInput").value = "PVsim";
         break;
       case Mode_e.User:
-        document.querySelector(".modeText").textContent = "User";
-        document.querySelector(".modeInput").value = "User";
-        break;
       case Mode_e.Script:
-        document.querySelector(".modeText").textContent = "Script";
-        document.querySelector(".modeInput").value = "Script";
         break;
       default:
         break;
@@ -1121,10 +1129,9 @@ function mode_input(mode)
 
   if (state.power === Power_e.ON) 
   {
-    alert("Sorry!! \nCan't change mode when Output is ON.");
+    showError("Not possible when device is running.");
     return;
   }
-
   switch (mode) 
   {
     case "UI":
@@ -1206,10 +1213,10 @@ function Local_btn_click()
 function setval_input(str, val)
 {
   // V: Checking if passed parameters are valid or not.
-	if(!str && !isFinite(val))
+	if(!str)
 	{
     console.log("Invalid input : " + val);
-    Error_Message("Please provide a valid input.");
+    // Error_Message("Please provide a valid input.");
     return;
   }
 
@@ -1226,7 +1233,7 @@ function setval_input(str, val)
         val = 0;
       }
       set.v = val;
-      update_set_values(val, str);
+      update_set_values(set.v, str);
       break;
 
     case 'ia':
@@ -1239,7 +1246,7 @@ function setval_input(str, val)
         val = 0;
       }
       set.i = val;
-      update_set_values(val, str);
+      update_set_values(set.i, str);
       break;
 
     case 'pa':
@@ -1337,12 +1344,12 @@ function setval_drag(str, val)
 // V: function that will be called when configuration parameters are changing.
 function config_page_input(config_str,config_val)
 {
-  if(!isFinite(config_val))
+  if(!config_str)
   {
-    Error_Message("Please provide a valid input.");
     return;
   }
   var send_cmd_config = null;
+  var float_integer_flag = false;  // V: If True send Float data else send integer data.
   switch(config_str)
   {
     case "Vlim":
@@ -1352,10 +1359,9 @@ function config_page_input(config_str,config_val)
         config_val = 0.0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_VLIM);
       set.vLim = config_val;
+      float_integer_flag = true;
       // V: updating set volatage immediately if Vlimit is changed.
-      if(set.v >= set.vLim)
-        set.v = set.vLim;
-      update_set_values(set.v, "ua");
+      // setTimeout(setval_input("ua",set.v),2500);
     break;
 
     case "Clim":
@@ -1365,10 +1371,9 @@ function config_page_input(config_str,config_val)
         config_val = 0.00;
       send_cmd_config = Uint8Array.of(Messages_e.SET_ILIM);
       set.iLim = config_val;
-      // V: updating set current immediately if Climit is changed.
-      if(set.i >= set.iLim)
-        set.i = set.iLim;
-      update_set_values(set.i, "ia");
+      float_integer_flag = true;
+      // V: updating set Current immediately if Climit is changed.
+      // setTimeout(setval_input("ia",set.i),2500);
     break;
 
     case "VSlope":
@@ -1378,6 +1383,7 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_V_SL);
       set.vSlope = config_val;
+      float_integer_flag = true;
     break;
 
     case "ISlope":
@@ -1387,6 +1393,7 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_I_SL);
       set.iSlope = config_val;
+      float_integer_flag = true;
     break;
 
     case "TEnable":
@@ -1396,11 +1403,12 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.TENABLE);
       configuration_params.TEnable = config_val;
+      float_integer_flag = false;
     break;
 
     case "RemLastSettings":
       send_cmd_config = Uint8Array.of(Messages_e.REMEMBER);
-      if(config_val == "On")
+      if(config_val === "On")
       {
         configuration_params.RemLastsettings = Last_Settings_e.ON;
         config_val = Last_Settings_e.ON;
@@ -1410,6 +1418,7 @@ function config_page_input(config_str,config_val)
         configuration_params.RemLastsettings = Last_Settings_e.OFF;
         config_val = Last_Settings_e.OFF;
       }
+      float_integer_flag = false;
     break;
 
     case "OutputOnDelay":
@@ -1419,6 +1428,7 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.TDELAY);
       configuration_params.Tdelay = config_val;
+      float_integer_flag = false;
     break;
 
     case "DataLogging":
@@ -1428,13 +1438,23 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.LOGGER);
       configuration_params.DataLogging = config_val;
+      float_integer_flag = false;
     break;
 
     default:
     break;
   }
+
   update_configuration_page_values(config_str,config_val);
-  ws.send(concatBuffers(send_cmd_config, Float32Array.of(config_val)));
+  if(float_integer_flag)
+  {
+    ws.send(concatBuffers(send_cmd_config, Float32Array.of(config_val)));
+  }
+  else
+  {
+    ws.send(concatBuffers(send_cmd_config, Uint8Array.of(config_val)));
+  }
+  
 }
 
 // V: function that will be called when config page sliders are dragged.
@@ -1587,6 +1607,7 @@ function protection_page_slider_drag(protection_slider_str,protection_slider_val
 //send keep_alive to check WS connection
 function send_keepAlive(){
 	if(is_onboard){
+    console.log("Pong to Server --> ");
 		 ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(keep_alive)));
 	}
 }
@@ -1691,9 +1712,15 @@ function concatBytes(ui8a, byte) {
 	return concatTypedArrays(ui8a, Uint8Array.of(byte));
 }
 
-// V: Function that will print error message if something happens.
-function Error_Message(message) {
-  document.getElementById("errorMessage").innerText = message;
+// V: Function that will show error message if something happens.
+function showError(message) {
   document.getElementById("errorModal").style.display = "block";
+  document.getElementById("error_Message").innerText = message;
+
+  // Auto-hide after 3 seconds
+  setTimeout(hideError, 4000);
 }
 
+function hideError() {
+  document.getElementById("errorModal").style.display = "none";
+}

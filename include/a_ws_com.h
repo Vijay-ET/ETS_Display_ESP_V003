@@ -240,6 +240,16 @@ typedef enum
 	Otp = 3
 } Fault_e;
 
+// Enum messages to know the status of Websocket
+typedef enum
+{
+	NI = -1,
+	DEAD = 0,
+	ALIVE = 1,
+	NO_DATA = 2,
+	CLOSE_WS = 3
+} Websocket_com_e;
+
 typedef struct
 {
 	uint8_t power = OFF;			 // Power_e

@@ -4814,16 +4814,52 @@ input[type="number"]::placeholder {
 .window {
     width: 100%;
     max-width: 800px; /* Adjust max-width as needed */
-    overflow: hidden;
+    /* overflow: hidden; */
 } */
 
 .logo-img {
     width: 100%;
-    height: auto; /* Maintain aspect ratio */
-    max-height: 250px; /* Limit height */
-    object-fit: contain; /* Prevent distortion */
-    image-rendering: crisp-edges; /* Improve clarity */
-    image-rendering: -webkit-optimize-contrast; /* Webkit optimization */
+    height: auto; 
+    max-height: 250px; 
+    object-fit: contain; 
+    image-rendering: crisp-edges; 
+    image-rendering: -webkit-optimize-contrast;
 }
 
+.modal {
+    position: fixed;
+    top: 10px;
+    left: 50%; 
+    transform: translateX(-50%); 
+    width: 500px; 
+    height: 140px;
+    padding: 25px; 
+    background: #b4d0e6;
+    color: #1496ed;
+    border-left: 10px solid #3498db; 
+    display: none;
+    font-family: Arial, sans-serif;
+    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.4); 
+    border-radius: 10px; 
+    text-align: center;
+    font-size: 18px; 
+    font-weight: bold;
+    z-index: 9999; 
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.close-btn {
+    cursor: pointer;
+    color: #ff0537;
+    font-size: 20px; 
+    font-weight: bold;
+    margin-left: 15px;
+}
 

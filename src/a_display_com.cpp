@@ -234,6 +234,7 @@ void COM_Handler(void) // V: Function that will Recieve Data from STM32 Through 
 		ESP.wdtFeed();
 		D_DataReceived(Serial.read()); // V: Read Data From UART( Binary Data)
 	} 
+	ESP.wdtFeed();
 
 	// Check for parameter changes and call the corresponding function
 	for (int protnum = 0; protnum < __PROTO_COUNT; ++protnum)
@@ -275,7 +276,7 @@ void COM_Handler(void) // V: Function that will Recieve Data from STM32 Through 
 		cmd_idx = 1;
 		return;
 	}
-
+	ESP.wdtFeed();
 	// send 1 command and leave handler
 	for (uint8_t num = 0; num < __PROTO_COUNT; ++num)
 	{
