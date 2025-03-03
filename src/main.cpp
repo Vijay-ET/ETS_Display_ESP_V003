@@ -1282,11 +1282,33 @@ void cb_com_setz_changed(Proto_Num_e num)
 		break;
 	
 	case FOLDBACK:
-		// V: Write the logic afterwards
+		switch (com_drv.foldback)
+		{
+			case 0:
+				FoldBack.foldback = FOLD_OFF;
+				break;
+			
+			case 1:
+				FoldBack.foldback = FOLD_CV;
+				break;
+
+			case 2:
+				FoldBack.foldback = FOLD_CC;
+				break;
+
+			case 3:
+				FoldBack.foldback = FOLD_CP;
+				break;
+
+			default:
+				break;
+		}
+		queue_WS_MSG(FOLDBACK_WS);
 		break;
 	
 	case FOLDBACKTM:
-		// V: Write logic afterwards.
+		FoldBack.foldbackTm = (uint16)com_drv.foldbacktm;
+		queue_WS_MSG(FOLDBACKTM_WS);
 		break;
 
 	default:

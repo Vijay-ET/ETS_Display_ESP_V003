@@ -83,6 +83,7 @@ XYPlotData_t xyPlotData;
 MS_Status_t msstate;
 Ident_t ident;
 Compid_t compid;
+Foldback_t FoldBack;    // V: New structure implemented to hold the Foldback & FoldbackTm.
 extern uint8_t ms_available;
 uint8_t source_local = SOURCE_FRONT;
 extern Timer_t lastNoClientMessage ;
@@ -667,7 +668,17 @@ void handle_Received_Message(uint8_t *data, size_t len)
         client_connected = false;
       }
       break;
-      
+    
+    case FOLDBACK_WS:
+      memcpy((uint8_t*)&FoldBack.foldback, data +1, sizeof(Foldback_com_e));
+      COM_SendParameter(FOLDBACK);
+      break;
+
+    case FOLDBACKTM_WS:
+      memcpy((uint8_t*)&FoldBack.foldbackTm, data +1, sizeof(uint16));
+      COM_SendParameter(FOLDBACKTM);
+      break;
+
     default:
       break;
   }
@@ -1207,7 +1218,19 @@ void ws_Send_Data(Messages_e message)
       webSocket.binaryAll(buffer, sizeof(uint8_t) + 1);
       Serial_Printing_Port.println("Ping to client --> \n");
       break;
+
+    case FOLDBACK_WS:
+    buffer[0] = FOLDBACK_WS;
+    memcpy(buffer +1, (uint8_t*)&FoldBack.foldback, sizeof(Foldback_com_e));
+    webSocket.binaryAll(buffer,sizeof(Foldback_com_e) + 1);
+      break;
 	  
+    case FOLDBACKTM_WS:
+    buffer[0] = FOLDBACKTM_WS;
+    memcpy(buffer + 1, (uint8_t*)&FoldBack.foldbackTm, sizeof(uint16));
+    webSocket.binaryAll(buffer,sizeof(uint16) + 1);
+      break;
+
     default:
       break;
   };
@@ -1325,7 +1348,8 @@ void update_All_Data()
   COM_GetParameter(OCP);
   COM_GetParameter(T_OCP);
   COM_GetParameter(T_UVP);
-  // COM_GetParameter(FOLDBACK);
+  COM_GetParameter(FOLDBACK);
+  COM_GetParameter(FOLDBACKTM);
   ESP.wdtFeed();
 }
 

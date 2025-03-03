@@ -109,7 +109,9 @@ typedef enum
 	COUNTER_ACTIVE = 75,
 	ALL_DATA = 76,
 	KP_ALIVE = 77,
-	ANZ_MSG = 78,
+	FOLDBACK_WS = 78,
+	FOLDBACKTM_WS = 79,
+	ANZ_MSG = 80,
 } Messages_e; // V: 4 Bytes
 
 typedef enum
@@ -262,6 +264,23 @@ typedef struct
 	uint8_t fault = NA;
 } Status_t; // V: 9 Bytes
 
+// V: Enum to hold the Foldback modes.
+typedef enum
+{
+	FOLD_OFF = 0,
+	FOLD_CV = 1,
+	FOLD_CC = 2,
+	FOLD_CP = 3
+} Foldback_com_e;
+
+// V: Struct to hold Foldback variables
+typedef struct
+{
+	uint16 foldbackTm;
+	Foldback_com_e foldback;
+} Foldback_t;
+
+
 typedef struct
 {				 // V: I think one Variable will be created of this type for every mem of control_t Struct
 	float p = 1; // V: They are inter linked in setup tab of the Touch display and web page
@@ -382,6 +401,7 @@ extern Ident_t ident;
 extern Compid_t compid;
 extern uint8_t source_local;
 extern bool counter_active;
+extern Foldback_t FoldBack;
 
 /***********************************************************
  * Funktionsdeklarationen

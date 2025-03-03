@@ -62,10 +62,9 @@ var accuracy = { v: 0.005, i: 0.001, p: 0.001, r: 0.001 };
 var monitor = { v: 0, i: 0, p: 0, r: 0 };
 // V: Init param's or config page values strut
 var configuration_params = {RemLastsettings:0, Tdelay:0, TEnable:0, DataLogging:0,};
-// V: Variable to hold Foldback currently not implemented.
-var Folback = 0;
 var Vslope_max = 1, Islope_max = 1, TEnable_max = 100, OutputOnDelay_max = 100, Ovp_max = 0, Ocp_max = 0,
-    DataLogging_max = 100, Uvp_max = 0, Uvp_min = 0, UvpT_min = 100, UvpT_max = 1000, OcpT_min = 1, OcpT_max = 5000;
+    DataLogging_max = 100, Uvp_max = 0, Uvp_min = 0, UvpT_min = 100, UvpT_max = 1000, OcpT_min = 1, OcpT_max = 5000,
+    FoldbackTm_min = 10, FoldbackTm_max = 10000;
 
 // ------------------- ENUM Declarations ------------
 // V: Enum used to declrae which command(message) is received.
@@ -148,12 +147,14 @@ const Messages_e = {
     COUNTER_ACTIVE: 75,
     ALL_DATA: 76,
     KP_ALIVE: 77,
-    ANZ_MSG: 78,
+    FOLDBACK : 78,
+    FOLDBACKTM : 79,
+    ANZ_MSG: 80,
   };
 
 const Websocket_com_e = {DEAD:0, ALIVE:1, STM_FREEZED:2, CLOSE_WS:3};
 const Last_Settings_e = {OFF:0, ON:1};
-const Folback_e = {OFF:0, CV:1, CC:2, CP:3};
+const FoldBack_e = {Fold_OFF:0, Fold_CV:1, Fold_CC:2, Fold_CP:3};
 const Power_e = { ON: 0, OFF: 1, OFF_PEND: 2, ON_PEND: 3 };                 // V: Enum to describe the power statem device
 const Mode_e = { VC: 0, VCP: 1, VCR: 2, PVsim: 3, User: 4, Script: 5 };     // V: Enum to describe the mode of device
 const Local_Source_e = { Local: 0, WLAN: 1 };                               // V: Enum to describe the control of device(Ambiguties currently)
@@ -185,6 +186,10 @@ var state = {
   fault: Fault_e.NA,
 };
 
+var FoldBack = {
+  Foldback : FoldBack_e.OFF,
+  FoldbackTm : 0,
+};
 
 // ------------------- Private functions Definitions ------------
 
@@ -417,6 +422,16 @@ function handle_WS_Message(e)
       case Messages_e.LOGGER:
         configuration_params.DataLogging = new Uint8Array(e.data.slice(1, 2))[0];
         update_configuration_page_values("DataLogging",configuration_params.DataLogging);
+        break;
+      
+      case Messages_e.FOLDBACK:
+        FoldBack.Foldback = new Uint8Array(e.data.slice(1,5))[0];
+        update_Protection_page_values("Foldback",FoldBack.Foldback);
+        break;
+
+      case Messages_e.FOLDBACKTM:
+        FoldBack.FoldbackTm = new Uint8Array(e.data.slice(1,3))[0];
+        update_Protection_page_values("FoldbackTm",FoldBack.FoldbackTm);
         break;
 
       case Messages_e.XY_AXIS:
@@ -840,6 +855,7 @@ function Update_status(recv_status)
         break;
       case Mode_e.User:
       case Mode_e.Script:
+        showError("User & Script modes are in Progress Currently.");
         break;
       default:
         break;
@@ -1093,7 +1109,30 @@ function update_Protection_page_values(protection_str,protection_val)
       break;
 
     case "Foldback":
-      document.getElementById("foldbackRow").value = protection_val;
+      switch(protection_val)
+      {
+        case FoldBack_e.Fold_OFF:
+          document.getElementById("foldbackRow").value = "OFF";
+          break;
+        
+        case FoldBack_e.Fold_CV:
+          document.getElementById("foldbackRow").value = "Fold_CV";
+          break;
+
+        case FoldBack_e.Fold_CC:
+          document.getElementById("foldbackRow").value = "Fold_CC";
+          break;
+        
+        case FoldBack_e.Fold_CP:
+          document.getElementById("foldbackRow").value = "Fold_CP";
+          break;
+
+        default:
+          break;
+      }
+      break;
+
+    case "FoldbackTm":
       break;
 
     default:
@@ -1331,7 +1370,7 @@ function config_page_input(config_str,config_val)
     return;
   }
   var send_cmd_config = null;
-  var float_integer_flag = false;  // V: If True send Float data else send integer data.
+  var integer_flag = false;  // V: If True send Float data else send integer data.
   if(config_str != "RemLastSettings")
   {
     config_val = Number(config_val);
@@ -1345,7 +1384,6 @@ function config_page_input(config_str,config_val)
         config_val = 0.0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_VLIM);
       set.vLim = config_val;
-      float_integer_flag = true;
       if(set.v > set.vLim)
         setval_input("ua",set.v);
     break;
@@ -1357,7 +1395,6 @@ function config_page_input(config_str,config_val)
         config_val = 0.00;
       send_cmd_config = Uint8Array.of(Messages_e.SET_ILIM);
       set.iLim = config_val;
-      float_integer_flag = true;
       if(set.i > set.iLim)
         setval_input("ia",set.iLim);
     break;
@@ -1369,7 +1406,6 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_V_SL);
       set.vSlope = config_val;
-      float_integer_flag = true;
     break;
 
     case "ISlope":
@@ -1379,7 +1415,6 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_I_SL);
       set.iSlope = config_val;
-      float_integer_flag = true;
     break;
 
     case "TEnable":
@@ -1389,7 +1424,7 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.TENABLE);
       configuration_params.TEnable = config_val;
-      float_integer_flag = false;
+      integer_flag = true;
     break;
 
     case "RemLastSettings":
@@ -1404,7 +1439,7 @@ function config_page_input(config_str,config_val)
         configuration_params.RemLastsettings = Last_Settings_e.OFF;
         config_val = Last_Settings_e.OFF;
       }
-      float_integer_flag = false;
+      integer_flag = true;
     break;
 
     case "OutputOnDelay":
@@ -1414,7 +1449,7 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.TDELAY);
       configuration_params.Tdelay = config_val;
-      float_integer_flag = false;
+      integer_flag = true;
     break;
 
     case "DataLogging":
@@ -1424,7 +1459,7 @@ function config_page_input(config_str,config_val)
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.LOGGER);
       configuration_params.DataLogging = config_val;
-      float_integer_flag = false;
+      integer_flag = true;
     break;
 
     default:
@@ -1432,13 +1467,13 @@ function config_page_input(config_str,config_val)
   }
 
   update_configuration_page_values(config_str,config_val);
-  if(float_integer_flag)
+  if(integer_flag)
   {
-    ws.send(concatBuffers(send_cmd_config, Float32Array.of(config_val)));
+    ws.send(concatBuffers(send_cmd_config, Uint8Array.of(config_val)));
   }
   else
   {
-    ws.send(concatBuffers(send_cmd_config, Uint8Array.of(config_val)));
+    ws.send(concatBuffers(send_cmd_config, Float32Array.of(config_val)));
   }
   
 }
@@ -1495,7 +1530,10 @@ function Protection_page_input(protection_str,protection_val)
     return;
   }
   var send_cmd_protection = null;
-  protection_val = Number(protection_val);
+  int_flag = false;
+  if(protection_str != "Foldback")
+    protection_val = Number(protection_val);
+
   switch(protection_str)
   {
     case "Ovp":
@@ -1544,14 +1582,54 @@ function Protection_page_input(protection_str,protection_val)
       break;
 
     case "Foldback":
-      // V: Currently command is not there. Implement later.
+      switch(protection_val)
+      {
+        case "off":
+          protection_val = FoldBack_e.Fold_OFF;
+          break;
+        
+        case "cv":
+          protection_val = FoldBack_e.Fold_CV;
+          break;
+
+        case "cc":
+          protection_val = FoldBack_e.Fold_CC;
+          break;
+        
+        case "cp":
+          protection_val = FoldBack_e.Fold_CP;
+          break;
+
+        default:
+          break;
+      }
+      send_cmd_protection = Uint8Array.of(Messages_e.FOLDBACK);
+      FoldBack.Foldback = protection_val;
+      int_flag = true;
+      break;
+
+    case "FoldbakTm":
+      if(protection_val >= FoldbackTm_max)
+        protection_val = FoldbackTm_max;
+      else if(protection_val <= FoldbackTm_min)
+        protection_val = FoldbackTm_min;
+      send_cmd_protection = Uint8Array.of(Messages_e.FOLDBACKTM);
+      FoldBack.FoldbackTm = protection_val;
+      int_flag = true;
       break;
 
     default:
       break;
   }
   update_Protection_page_values(protection_str,protection_val);
-  ws.send(concatBuffers(send_cmd_protection, Float32Array.of(protection_val)));
+  if(int_flag)
+  {
+    ws.send(concatBuffers(send_cmd_protection, Uint8Array.of(protection_val)));
+  }
+  else
+  {
+    ws.send(concatBuffers(send_cmd_protection, Float32Array.of(protection_val)));
+  }
 }
 
 // V: function that will be called when protection page sliders are dragged
