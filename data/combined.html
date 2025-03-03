@@ -300,35 +300,63 @@
                                         <div class="column is-2">V</div>
                                     </div>
                                 </div>
-                                <!-- <div class="column is-7">
+                               
+                                <div class="column is-6">
                                     <div class="columns is-mobile" >
-                                        <div class="column is-2" style="margin-top: 2px; margin-left: 250px;" ><b>FOLDBACK</b></div>
-                                        <div class="column is-8" >
-                                            <select class="input Foldback InputBox" id="foldbackRow" onchange='Protection_page_input("Foldback", this.value)' style=" margin-left: -10px; width: 200px; width: 100px;">
-                                                <option value="off">OFF</option>
-                                                <option value="cv">Fold_CV</option>
-                                                <option value="cc">Fold_CC</option>
-                                                <option value="cp">Fold_CP</option>
-                                            </select>
-                                        </div> 
+                                        <div class="column is-2"><b>FOLDBACK TIME</b></div>
+                                        <div class="column is-5">
+                                            <input class="fit FoldbakTmInput slidercolor " max="10000"  min="10" onchange='Protection_page_input("FoldbakTm",this.value)' step="1" type="range" value="300" id="FoldbakTmRange" oninput='protection_page_slider_drag("FoldbakTm",this.value)'>
+                                        </div>
+                                        <div class="column is-4">
+                                            <input class="input FoldbakTmInput" max="10000" min="10"onchange='Protection_page_input("FoldbakTm",this.value)' step="1" type="number" value="300">
+                                        </div>
+                                        <div class="column is-2">sec</div>
                                     </div>
-                                </div> -->
+                                </div>
                             </div>
                         
-                            <div class="columns is-mobile" >
+                            <div class="columns is-mobile">
+                                <!-- UVP Section -->
                                 <div class="column is-6">
                                     <div class="columns is-mobile" id="UvpRow">
                                         <div class="column is-2"><b>UVP</b></div>
                                         <div class="column is-5">
-                                            <input class="fit UvpInput slidercolor" max="675" min="-1" onchange='Protection_page_input("Uvp",this.value)' step="0.1" type="range" value="30" id="UvpRange" oninput='protection_page_slider_drag("Uvp",this.value)'>
+                                            <input class="fit UvpInput slidercolor" max="675" min="-1" 
+                                                onchange='Protection_page_input("Uvp",this.value)' 
+                                                step="0.1" type="range" value="30" id="UvpRange" 
+                                                oninput='protection_page_slider_drag("Uvp",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input UvpInput" max="675" min="-1" onchange='Protection_page_input("Uvp",this.value)' step="0.1" type="number" value="30" placeholder="" title="Enter -1 to Turn off UVP">
+                                            <input class="input UvpInput" max="675" min="-1" 
+                                                onchange='Protection_page_input("Uvp",this.value)' 
+                                                step="0.1" type="number" value="30" placeholder="" 
+                                                title="Enter -1 to Turn off UVP">
                                         </div>
                                         <div class="column is-2">V</div>
                                     </div>
-                                </div>                           
-                            </div>                        
+                                </div>  
+                            
+                                <!-- Foldback Section -->
+                                <div class="column is-6">
+                                    <div class="columns is-mobile">
+                                        <div class="column is-2"><b>FOLDBACK</b></div>
+                                        <div class="column is-5">
+                                           
+                                        </div>
+                                        <div class="column is-4">
+                                            <select class="input InputBox" id="foldbackRow" style="width: 300px;" 
+                                            onchange='config_page_input("Foldback", this.value)'>
+                                            <option value="off">OFF</option>
+                                            <option value="cv">Fold_CV</option>
+                                            <option value="cc">Fold_CC</option>
+                                            <option value="cp">Fold_CP</option>
+                                        </select>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                                            
                             <div class="columns is-mobile" >
                                 <div class="column is-6">
                                     <div class="columns is-mobile" id="OcpRow">
@@ -459,32 +487,48 @@
                                 
                             </div>
                             <div class="columns is-mobile">
+                                <!-- V Slope Section -->
                                 <div class="column is-6">
                                     <div class="columns is-mobile" id="VSlopeRow">
                                         <div class="column is-2"><b>V SLOPE</b></div>
                                         <div class="column is-5">
-                                            <input class="fit VSlopeInput slidercolor" max="1000" onchange='config_page_input("VSlope",this.value)' step="1" type="range" value="300" id="VSlopeRange" oninput='config_page_slider_drag("VSlope",this.value)'>
+                                            <input class="fit VSlopeInput slidercolor" max="1000" 
+                                                onchange='config_page_input("VSlope",this.value)' 
+                                                step="1" type="range" value="300" id="VSlopeRange" 
+                                                oninput='config_page_slider_drag("VSlope",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input VSlopeInput" max="1000" onchange='config_page_input("VSlope",this.value)' step="1" type="number" value="300" placeholder="" title="Enter 0 to Turn off Vslope">
+                                            <input class="input VSlopeInput" max="1000" 
+                                                onchange='config_page_input("VSlope",this.value)' 
+                                                step="1" type="number" value="300" placeholder="" 
+                                                title="Enter 0 to Turn off Vslope">
                                         </div>
                                         <div class="column is-2">V/S</div>
                                     </div>
                                 </div>
+                            
                                
-                               <div class="column is-7" style="margin-left: 50px ;">
-                                    <div class="columns is-mobile" >
-                                        <div class="column is-2" style="margin-left: -50px;"><b>LAST SETTING</b></div>
-                                        <div class="column is-8" style="margin-top: -5px; margin-left: -24px; width: 650px;">
-                                            <select class="input InputBox" id="RemLastSettingsRow" onchange='config_page_input("RemLastSettings", this.value)' style=" margin-left: 360px; width: 260px;">
-                                                <option value="Off">Off</option>
-                                                <option value="On">On</option>
-                                            </select>
+                                <div class="column is-6">
+                                    <div class="columns is-mobile">
+                                        <div class="column is-2"><b>LAST SETTINGS</b></div>
+                                        <div class="column is-5">
+                                           
                                         </div>
+                                        <div class="column is-4">
+                                            <select class="input InputBox" id="RemLastSettingsRow" style="width: 300px;" 
+                                            onchange='config_page_input("RemLastSettings", this.value)'>
+                                            <option value="Off">Off</option>
+                                            <option value="On">On</option>
+                                        </select>
+                                        </div>
+                                        
                                     </div>
                                 </div>
-                            </div>
 
+
+                            </div>
+                            
+                             
                             <div class="columns is-mobile">
                                 <div class="column is-6">
                                     <div class="columns is-mobile" id="ISlopeRow">
