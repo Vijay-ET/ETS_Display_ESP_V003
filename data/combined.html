@@ -112,7 +112,7 @@
                                         onchange='setval_input("ia",this.value)' step=0.01 type=range value=30 id=iRange
                                         oninput='setval_drag("ia",this.value)' min=0></div>
                                 <div class="column is-4"><input class="input iaInput" max=100
-                                        onchange='setval_input("ia",this.value)' step=0.01 type=number value=30 min=0>
+                                        onchange='setval_input("ia",this.value)' step=0.01 type=number value=30 >
                                 </div>
                                 <div class="column is-2">A</div>
                             </div>
@@ -443,7 +443,6 @@
                                         <div class="column is-2">A</div>
                                     </div>
                                 </div>
-                                <!-- -->
                                 
                                  <div class="column is-6">
                                     <div class="columns is-mobile" id="DataLoggingRow">
@@ -523,7 +522,7 @@
       </div>
       <div id="errorModal" class="modal">
         <div class="modal-header">
-            <span>Error Box</span>
+            <span>Error Message</span>
             <span class="close-btn" onclick="hideError()">&times;</span>
         </div>
         <p id="error_Message">Default Error Text</p>

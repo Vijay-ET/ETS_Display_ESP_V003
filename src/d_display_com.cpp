@@ -320,6 +320,7 @@ uint32_t calc_checksum(Packet_t *packet, uint16_t payload_len)
 
 void Clean_serial_buffer(void)
 {
+  ESP.wdtFeed();
 #ifdef DEBUG_MESSAGES_ACTIVE
   Serial_Printing_Port.println("Cleaing the serial buffers.");
 #endif

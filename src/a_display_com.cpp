@@ -10,7 +10,7 @@
 #include "nan.h"
 #include "d_timer.h"
 #include "Serial_prints.h"
-// #include "a_ws_com.h"
+#include "a_ws_com.h"
 
 /***********************************************************
  * Global variables
@@ -33,6 +33,9 @@ static Timer_t send_req_timestamp;
 
 int local_source_cnt = 0;
 
+// V: Varaibles used to notfiy webpage that STM is Freezed.
+Timer_t Time_STM_Last_msg_received;
+bool STM_Freezed = false;
 /***********************************************************
  * Private data types
  ***********************************************************/
@@ -216,11 +219,6 @@ comdrvErr_e COM_Driver_Register(com_drv_t *driver)
 	return COM_OK;
 }
 
-// void serialEvent() {
-//     while (Serial.available()) {
-//         D_DataReceived(Serial.read());
-//     }
-// }
 /**
  * Handle received data and send queued packets
  * @param 	void
@@ -228,6 +226,12 @@ comdrvErr_e COM_Driver_Register(com_drv_t *driver)
  */
 void COM_Handler(void) // V: Function that will Recieve Data from STM32 Through UART
 {
+	ESP.wdtFeed();
+	if(timer_get_time() - Time_STM_Last_msg_received >= 5000)
+	{
+		STM_Freezed = true;
+		queue_WS_MSG(KP_ALIVE);
+	}
 	// Handle all received bytes
 	while (Serial.available())
 	{
@@ -507,6 +511,8 @@ void send_data_packet(Proto_Num_e num)
  */
 void payload_assign_received(Proto_Num_e num, void *payload) // V: this is called by D_PacketDataValidReceived() function.
 {
+	ESP.wdtFeed();
+	Time_STM_Last_msg_received = timer_get_time();
 	Serial_Printing_Port.print("What is received : ");
 	Serial_Printing_Port.println(num);
 	switch (num)

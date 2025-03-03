@@ -4834,12 +4834,12 @@ input[type="number"]::placeholder {
     width: 500px; 
     height: 140px;
     padding: 25px; 
-    background: #b4d0e6;
-    color: #1496ed;
-    border-left: 10px solid #3498db; 
+    background: whitesmoke;
+    color: #040404;
+    border: 2px solid #7a7a7a;
     display: none;
     font-family: Arial, sans-serif;
-    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.4); 
+    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.4);
     border-radius: 10px; 
     text-align: center;
     font-size: 18px; 
@@ -4854,11 +4854,13 @@ input[type="number"]::placeholder {
     font-size: 18px;
     font-weight: bold;
 }
-
+.modal span{
+    color: red;
+}
 .close-btn {
     cursor: pointer;
-    color: #ff0537;
-    font-size: 20px; 
+    color: #000;
+    font-size: 25px; 
     font-weight: bold;
     margin-left: 15px;
 }

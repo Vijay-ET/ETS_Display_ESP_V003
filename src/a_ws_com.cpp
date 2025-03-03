@@ -85,8 +85,9 @@ Ident_t ident;
 Compid_t compid;
 extern uint8_t ms_available;
 uint8_t source_local = SOURCE_FRONT;
-extern Timer_t elapseTime;
-extern Timer_t elapseTime1;
+extern Timer_t lastNoClientMessage ;
+extern Timer_t Ws_last_Ping_Time;
+extern Timer_t Ws_Ping_Time;
 extern uint8_t counter;
 bool counter_active = false;
 bool counting = false;
@@ -101,6 +102,10 @@ bool got_response = false;
 
 // V: variable used to Track the connected clients.
 int clients_num = 0;
+int Ws_clean_count =0; // V: variable used to clean websocket resources.
+
+extern Timer_t Time_STM_Last_msg_received;
+extern bool STM_Freezed;
 
 /***********************************************************
  * Lokale Funktionen
@@ -218,7 +223,7 @@ void init_WS(){
         
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     ESP.wdtFeed();
-    Serial_Printing_Port.println("\n\n Received HTTP Request. Serving the Webcontents.\n\n");
+    Serial_Printing_Port.println("\n\n Received HTTP Request. Serving the Webcontents.\n");
     request->send(SPIFFS, "/combined.html", String(), false);
   });
   server.on("/combined.css", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -234,8 +239,10 @@ void init_WS(){
     request->send(SPIFFS, "/Script.js", "text/javascript");  
   });
   server.on("/etLogo.webp", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial_Printing_Port.println(" -->  Serving the image..\n\n");
      ESP.wdtFeed();
     request->send(SPIFFS, "/etLogo.webp", "image/webp");
+    delay(1);
   });
  
   server.begin();          //Start server
@@ -254,7 +261,7 @@ void init_WS(){
 
 void WS_COM_Handler()
 {
-  ESP.wdtFeed();	
+  ESP.wdtFeed();
   if(webSocket.availableForWriteAll())          // Space in queue for further messages
   {
     for(uint8_t i = 0; i < ANZ_MSG; ++i)        // Search for the next item to send."
@@ -272,61 +279,42 @@ void WS_COM_Handler()
   ESP.wdtFeed();
 
   //Send ping to WS 
-  if(server_running){
-    if(keep_alive && client_connected){  
-      //send PingPong message after 5s
-      if(got_response){
-        if(timer_get_time() - elapseTime1 >= 5000){
-          Serial_Printing_Port.print("\nClients Connected : ");
-          Serial_Printing_Port.println(clients_num);
-          elapseTime1 = timer_get_time();
+  if(server_running)
+  {
+    // V: Cleaning dead client resources for every 5 seconds sinces disconnect event not triggering.
+    if( (Ws_clean_count++) >= 70000)
+    {
+      webSocket.cleanupClients();
+    }
+
+    if(client_connected)
+    {
+      if(got_response)
+      {
+        if(timer_get_time() - Ws_Ping_Time >= 5000){
+          Serial_Printing_Port.printf("\nClients Connected : %d\n",clients_num);
+          Ws_Ping_Time = timer_get_time();
           queue_WS_MSG(KP_ALIVE);
-          // got_response = false;
-        }
-        // check ping pong after 8s
-        if(timer_get_time() - elapseTime >= 10000){
-          elapseTime = timer_get_time();
-          got_response = false;            
+          got_response = false;
         }
       }
-      else{
-        //restart after 20s
-        if(timer_get_time() - elapseTime >= 20000){
-          elapseTime = timer_get_time();
+      else
+      {
+        if(timer_get_time() - Ws_last_Ping_Time >= 20000){
+          Ws_last_Ping_Time = timer_get_time();
           Serial_Printing_Port.println("\n\n---------> No Response. <-----------\n");
-          keep_alive = 0;
-          // server_running = false;
-          clients_num--;
-          if(!clients_num)
-          {
-            client_connected = false;
-          }
-          // V: function for clearing websockets when response didn't came in time
+          client_connected = false;
+          got_response = false;     
           webSocket.cleanupClients(clients_num);
         }
       }
     }
-    else if(!keep_alive && !client_connected){
-      if(timer_get_time() - elapseTime > 1000){
-        elapseTime = timer_get_time();
-        keep_alive = false;
+    else
+    {
+      if(timer_get_time() - lastNoClientMessage > 1500){
+        lastNoClientMessage = timer_get_time();
         Serial_Printing_Port.println("   No Client Connected......");
     	 }
-    }
-    else if(!keep_alive && client_connected){
-      if(timer_get_time() - elapseTime > 2000){
-        elapseTime = timer_get_time();
-        // server_running = false;
-        client_connected = false;
-        Serial_Printing_Port.println("WS timeout !");
-        webSocket.cleanupClients(clients_num);
-      }
-    }
-    else{  //keep_alive && !client_connected
-        server_running = false;
-        Serial_Printing_Port.println("WS Closed !! ");
-        webSocket.cleanupClients(clients_num);
-        // init_WS();
     }
   }
   else{
@@ -337,7 +325,6 @@ void WS_COM_Handler()
     Init_Wifi();                            // V: Again Restarting Wi-Fi if Some issue happened.
     // init_WS();
   }
-  // Serial_Printing_Port.println("Going back to  Com_hadler.");
 }
 
 void update_AP_password(const char* password){
@@ -393,9 +380,10 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
     ++clients_num;  // V: increamenting because a client is connected.
     update_All_Data();
     queue_WS_MSG(KP_ALIVE);
+    Ws_Ping_Time = timer_get_time();
+    Ws_last_Ping_Time = timer_get_time();
     // delay(3);
     queue_WS_MSG(ALL_DATA);
-    elapseTime = timer_get_time();
     source_local = SOURCE_WLAN;
     com_drv.local_source = (uint8_t)source_local;
     COM_SendParameter(LOCAL_SOURCE);
@@ -409,22 +397,15 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
   else if(type == WS_EVT_DISCONNECT)
   {
     ESP.wdtFeed();
-    elapseTime = timer_get_time();
     // V: removing client manually
     Serial_Printing_Port.print("Client disconnected ID : ");
     Serial_Printing_Port.print(client->id());
     Serial_Printing_Port.println("");
     clients.erase(client->id());
-    --clients_num;
-    if(clients_num <= 0)
-    {
-      clients_num = 0;
-      keep_alive = 0;
-      client_connected = false;
-      source_local = SOURCE_FRONT;
-      com_drv.local_source = (uint8_t)source_local;
-      COM_SendParameter(LOCAL_SOURCE);
-    }
+    client_connected = false;
+    source_local = SOURCE_FRONT;
+    com_drv.local_source = (uint8_t)source_local;
+    COM_SendParameter(LOCAL_SOURCE);
   } 
   else if(type == WS_EVT_DATA)
   {
@@ -673,21 +654,17 @@ void handle_Received_Message(uint8_t *data, size_t len)
     case KP_ALIVE:
       memcpy((uint8_t*)&keep_alive, data + 1, sizeof(uint8_t));
       if(keep_alive == 1){
-        client_connected = true;
         got_response = true;
-        Serial_Printing_Port.println("Pong from client <--");
-        Serial_Printing_Port.println("");
+        client_connected = true;
+        Ws_last_Ping_Time = timer_get_time();
+        Serial_Printing_Port.println("\nPong from client <--\n");
       }
       else if(keep_alive == CLOSE_WS)
       {
-        keep_alive = false;
         Serial_Printing_Port.println("\n Received closing Request.\n");
         webSocket.cleanupClients(clients_num);
         clients_num--;
-        if(!clients_num)
-        {
-          client_connected = false;
-        }
+        client_connected = false;
       }
       break;
       
@@ -1220,10 +1197,15 @@ void ws_Send_Data(Messages_e message)
     case KP_ALIVE:
       // ws_Send_Text("Ping");
       buffer[0] = KP_ALIVE;
+      if(STM_Freezed)
+      {
+        keep_alive = (uint8)STM_FREEZED;
+        Time_STM_Last_msg_received = timer_get_time();
+        STM_Freezed = false;
+      }
       memcpy(buffer + 1, (uint8_t*)&keep_alive, sizeof(uint8_t));
       webSocket.binaryAll(buffer, sizeof(uint8_t) + 1);
-      Serial_Printing_Port.println("Ping to client --> ");
-      Serial_Printing_Port.println("");
+      Serial_Printing_Port.println("Ping to client --> \n");
       break;
 	  
     default:
@@ -1320,6 +1302,7 @@ void start_counter(){
 
 void update_All_Data()
 {
+  Clean_serial_buffer();
   COM_GetParameter(COMP_ID); 
 	COM_GetParameter(NT_STATUS);
 	COM_GetParameter(PARAMETER);
@@ -1342,7 +1325,8 @@ void update_All_Data()
   COM_GetParameter(OCP);
   COM_GetParameter(T_OCP);
   COM_GetParameter(T_UVP);
-  COM_GetParameter(FOLDBACK);
+  // COM_GetParameter(FOLDBACK);
+  ESP.wdtFeed();
 }
 
 void get_All_WS_data(){

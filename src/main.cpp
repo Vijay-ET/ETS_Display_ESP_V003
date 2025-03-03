@@ -61,14 +61,18 @@
 
 --> V003. Date :- 
 	+ Added 2 more pages in Web-Interface Configuration, Protection.
-	+ Update Set values struct in javascript with user input values from web-interface everytime they are update.
+	+ Update Set values struct in javascript with user input values from web-interface everytime they are updated.
 	+ Also added the previous one to new page value inputs also.(Maybe New pages parameter input giving.)
 	+ Updated the Rmin limits to -160 milli amps
 	+ Given Restrictions for user inputs. If given beyond the min & max limits of respective parameters.
 	+ Given Titles to notify users how to turn of particular Fetaure. when mouse is taken near that input text box.
-	
+	+ Strictly converted the passed parameters to be numbers in javascript.
+	+ Upgraded the Hand-Shake(Ping-Pong) messages b/w Wi-Fi moudle and Web-interface for Websocket commuication.
+	+ Implemented Modal boxes in javascript to notify users about different errors in a Non-blocking way to make the background communication work.
+	  Also added the functionality of notifying the user when STM is Freezed.
+	+ Added the functionaity to restrict Vmpp & Impp values to be in the range of calculations from the web-interface itslef.
+
 	Todo :-
-	+ Add the functionality to notify the STM reset is resetted. in Web-Interface.
 	+ Add cache control mechanism in the browser end so that Front-end files will be fetched faster.
 		Cache Control:
 
@@ -125,8 +129,10 @@ AsyncWebServer server(80);
 com_drv_t com_drv;
 Netzteil_Parameters_t NtParam;
 uint8_t ms_available;
-Timer_t elapseTime;
-Timer_t elapseTime1;
+Timer_t lastNoClientMessage ;
+Timer_t Ws_last_Ping_Time;
+Timer_t Ws_Ping_Time;
+
 uint8_t counter = 0;
 // uint8_t prio_cnt = 0;
 // uint8_t local_prio = 0;
@@ -209,10 +215,11 @@ void setup(void)
 	ESP.wdtEnable(3000); 	// V: Enabling the watchdog with 3 sec feed.
 	
 	timer_init();
-	elapseTime = timer_get_time();
-	elapseTime1 = timer_get_time();
-	msstate_timer = timer_get_time();
-	measure_timer = timer_get_time();
+	lastNoClientMessage = timer_get_time();
+	// Ws_last_Ping_Time = timer_get_time();
+	// Ws_Ping_Time = timer_get_time();
+	// msstate_timer = timer_get_time();
+	// measure_timer = timer_get_time();
 
 	Serial.begin(115200);   // V: same baud rate as the STM controller.
 	Serial1.begin(115200);

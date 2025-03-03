@@ -15,9 +15,7 @@ const WEBSITE_VERSION = "V009";
 var function_id, function_id2,              // V: Variables to store registered function id's for setinterval Thread.
 user_in_local_src,
 ws = null,                                  // V: Websocket variable
-nopong_cnt = 0,                             // V: These 4 variables are used to keep the Webcocket communication Persistant.
-keep_alive = 1,
-keep_alive_count = 0,
+nopong_cnt = 0,                             // V: These 2 variables are used to keep the Webcocket communication Persistant.
 got_response = 0;
 
 var is_onboard = true;   // V: true  -> Onboard data flow will be continous
@@ -153,7 +151,7 @@ const Messages_e = {
     ANZ_MSG: 78,
   };
 
-const Websocket_com_e = {NI:-1, DEAD:0, ALIVE:1, NO_DATA:2, CLOSE_WS:3};
+const Websocket_com_e = {DEAD:0, ALIVE:1, STM_FREEZED:2, CLOSE_WS:3};
 const Last_Settings_e = {OFF:0, ON:1};
 const Folback_e = {OFF:0, CV:1, CC:2, CP:3};
 const Power_e = { ON: 0, OFF: 1, OFF_PEND: 2, ON_PEND: 3 };                 // V: Enum to describe the power statem device
@@ -201,10 +199,8 @@ window.addEventListener("beforeunload", function() {
 
 // V: function to close the websocket 
 function closeWebSocket() {
-    if (ws) {
-      ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(Websocket_com_e.CLOSE_WS)));
-        ws.close();
-    }
+     send_keepAlive(Websocket_com_e.CLOSE_WS);
+      ws.close();
 }
 
 // V: starting function to be called after page loading
@@ -214,12 +210,7 @@ function setup()
     if(is_onboard)
     {
         ws_Connect();
-        function_id = setInterval(ws_PingPong, 5000);
     }
-    else
-    {
-        ws_Connect();
-    } 
 }
 
 // V: This will initialize & maintain the websocket communication b/w webpage & server
@@ -230,15 +221,13 @@ function ws_Connect()
   ws.binaryType = "arraybuffer";
   ws.onopen = function () {
   console.log("WebSocket connected.");
-  send_keepAlive();
-    // if (is_onboard) {
-    //   function_id2 = setInterval(Check_data_flow, 2200);
-    // }
+  function_id = setInterval(ws_PingPong, 5000);
+  send_keepAlive(Websocket_com_e.ALIVE);
   };
 
   ws.onclose = function () {
     console.log("Socket is getting closed.");
-    ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(Websocket_com_e.CLOSE_WS)));
+    send_keepAlive(Websocket_com_e.CLOSE_WS);
     ws.close();
   };
 
@@ -252,53 +241,36 @@ function ws_Connect()
   };
 
   ws.onerror = function () {
-    //showError("Error in WLAN communication \nPlease check if WLAN is Connected.");
+    showError("Error in WLAN communication \nPlease check if WLAN is Connected.");
     ws.close();
   };
 }
 
-// V: function that will be called for every 5 seconds to send keep_alive to server.
+// V: function that will be called for every 5 seconds to check the state of Websocket.
 function ws_PingPong() {
     if (got_response) 
     {
-      send_keepAlive();
+      send_keepAlive(Websocket_com_e.ALIVE);
       got_response = false;
       nopong_cnt = 0;
     } else 
     {
-      keep_alive = false;
       nopong_cnt++;
-  
-      if (nopong_cnt >= 2) 
+      if (nopong_cnt >= 3)
       {
         clearInterval(function_id);
-        showError("Error in WLAN communication. \nPlease check if WLAN is enabled.");
-        ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(Websocket_com_e.CLOSE_WS)));
+        showError("WLAN maybe Disconnected for a moment.\n Please Refresh the page.");
+        send_keepAlive(Websocket_com_e.CLOSE_WS);
         ws.close();
-        // setup();
-        // window.location.reload();
+        // ws_Connect();
       } 
       else 
       {
-        keep_alive = true;
-        send_keepAlive();
+        send_keepAlive(Websocket_com_e.ALIVE);
         got_response = false;
       }
     }
   }
-
-// V: function that will be called for every 2.2 seconds for monitoring data.
-function Check_data_flow() 
-{
-    if (data_flow) {
-      console.log("Communication is Persistent.");
-      data_flow = false;
-    } else {
-      clearInterval(function_id2);
-      console.log("Communication stopped from Server.");
-      window.location.reload();
-    }
-}
 
 // V: function that will recive messages from websocket and call respective functions
 function handle_WS_Message(e) 
@@ -525,10 +497,24 @@ function handle_WS_Message(e)
 
         // V: Keep alive case to keep Server & Client communication persistant. 
       case Messages_e.KP_ALIVE:
-        if (t[1] == 1) {
-          console.log("Ping from Server <-- ");
-          keep_alive = t[1];
-          got_response = true;
+        switch(t[1])
+        {
+          case Websocket_com_e.DEAD:
+            showError("Received Dead from server.");
+            break;
+          
+          case Websocket_com_e.ALIVE:
+            console.log("Ping from Server <-- ");
+            got_response = true;
+            break;
+
+          case Websocket_com_e.STM_FREEZED:
+            showError("Display is freezed.\n Please Reset the Power Supply.");
+            break;
+
+          case Websocket_com_e.CLOSE_WS:
+            showError("Received Websocket Closing request From server.");
+            break; 
         }
         break;
       
@@ -570,8 +556,8 @@ function Update_All_Set_values_First_Time(recv_preset_val)
 	}
 
 	// V: conevrting all float values into values that will appear 2 numbers after decimal point
-	set.i = parseFloat(set.i.toFixed(2));
 	set.v = parseFloat(set.v.toFixed(2));
+	set.i = parseFloat(set.i.toFixed(2));
 	set.p = parseFloat(set.p.toFixed(2));
 	set.r = parseFloat(set.r.toFixed(2));
 	set.impp = parseFloat(set.impp.toFixed(2));
@@ -608,6 +594,7 @@ function Update_All_Set_values_First_Time(recv_preset_val)
 //          V: str --> let's us know what is the values passed 
 function update_set_values(val, str)
 {
+  val = Number(val);
   if (str !== null)
   {
     switch (str) {
@@ -938,8 +925,7 @@ function update_configuration_page_values(str,val)
   {
     return;
   }
-
-  // val = val & 0xFF; // V: Converting IEEE representation to 32 bit representation.
+  val = Number(val);
   switch(str)
   {
     case "Vlim":
@@ -1129,7 +1115,7 @@ function mode_input(mode)
 
   if (state.power === Power_e.ON) 
   {
-    showError("Not possible when device is running.");
+    showError("Changing mode is Restricted,\n when device is running.");
     return;
   }
   switch (mode) 
@@ -1215,17 +1201,18 @@ function setval_input(str, val)
   // V: Checking if passed parameters are valid or not.
 	if(!str)
 	{
-    console.log("Invalid input : " + val);
-    // Error_Message("Please provide a valid input.");
+    Error_Message("Please provide a valid input.");
     return;
   }
 
   var sendarr = null;
+  const Float_Tolerance = 1e-10;
+  val = Number(val);
   switch (str) 
   {
     case 'ua':
       sendarr = Uint8Array.of(Messages_e.SET_V);
-      if (val >= set.vLim) {
+      if(val > (set.vLim + Float_Tolerance)) {
         val = set.vLim;
       }
       else if(val <= 0.0)
@@ -1233,12 +1220,11 @@ function setval_input(str, val)
         val = 0;
       }
       set.v = val;
-      update_set_values(set.v, str);
       break;
 
     case 'ia':
       sendarr = Uint8Array.of(Messages_e.SET_I);
-      if (val >= set.iLim) {
+      if(val > (set.iLim + Float_Tolerance)) {
         val = set.iLim;
       }
       else if(val <= 0.0)
@@ -1246,7 +1232,6 @@ function setval_input(str, val)
         val = 0;
       }
       set.i = val;
-      update_set_values(set.i, str);
       break;
 
     case 'pa':
@@ -1259,7 +1244,6 @@ function setval_input(str, val)
         val = 0;
       }
       set.p = val;
-      update_set_values(val, str);
       break;
 
     case 'ra':
@@ -1272,7 +1256,6 @@ function setval_input(str, val)
         val = DevParams.rmin;
       }
       set.r = val;
-      update_set_values(val, str);
       break;
 
     case 'umpp':
@@ -1285,7 +1268,6 @@ function setval_input(str, val)
         val = (10 * set.v)/19;
       val = val.toFixed(2);
       set.vmpp = val;
-      update_set_values(val, str);
       break;
 
     case 'impp':
@@ -1298,12 +1280,12 @@ function setval_input(str, val)
       val = val.toFixed(2);
       sendarr = Uint8Array.of(Messages_e.SET_IMPP);
       set.impp = val;
-      update_set_values(val, str);
       break;
 
     default:
       break;
   }
+  update_set_values(val, str);
   ws.send(concatBuffers(sendarr, Float32Array.of(val)));
 }
 
@@ -1340,7 +1322,7 @@ function setval_drag(str, val)
   }
 }
 
-// ----------------------->   Configuration Pages Input Functions   <---------   
+// --------------->   Configuration Pages Input Functions   <----------------
 // V: function that will be called when configuration parameters are changing.
 function config_page_input(config_str,config_val)
 {
@@ -1350,36 +1332,40 @@ function config_page_input(config_str,config_val)
   }
   var send_cmd_config = null;
   var float_integer_flag = false;  // V: If True send Float data else send integer data.
+  if(config_str != "RemLastSettings")
+  {
+    config_val = Number(config_val);
+  }
   switch(config_str)
   {
     case "Vlim":
-      if (config_val >= DevParams.umax)
+      if(config_val >= DevParams.umax)
         config_val = DevParams.umax;
       else if(config_val <= 0.0)
         config_val = 0.0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_VLIM);
       set.vLim = config_val;
       float_integer_flag = true;
-      // V: updating set volatage immediately if Vlimit is changed.
-      // setTimeout(setval_input("ua",set.v),2500);
+      if(set.v > set.vLim)
+        setval_input("ua",set.v);
     break;
 
     case "Clim":
-      if (config_val >= DevParams.imax)
+      if(config_val >= DevParams.imax)
         config_val = DevParams.imax;
       else if(config_val <= 0.00)
         config_val = 0.00;
       send_cmd_config = Uint8Array.of(Messages_e.SET_ILIM);
       set.iLim = config_val;
       float_integer_flag = true;
-      // V: updating set Current immediately if Climit is changed.
-      // setTimeout(setval_input("ia",set.i),2500);
+      if(set.i > set.iLim)
+        setval_input("ia",set.iLim);
     break;
 
     case "VSlope":
       if(config_val >= Vslope_max)
         config_val = Vslope_max;
-      else if(config_val <= 0)    // V: converting to 32 bit representation where -1 will be all 1's
+      else if(config_val <= 0)  
         config_val = 0;
       send_cmd_config = Uint8Array.of(Messages_e.SET_V_SL);
       set.vSlope = config_val;
@@ -1509,6 +1495,7 @@ function Protection_page_input(protection_str,protection_val)
     return;
   }
   var send_cmd_protection = null;
+  protection_val = Number(protection_val);
   switch(protection_str)
   {
     case "Ovp":
@@ -1604,11 +1591,29 @@ function protection_page_slider_drag(protection_slider_str,protection_slider_val
 
 // --------------- Websocket Send function definitions --------------
 
-//send keep_alive to check WS connection
-function send_keepAlive(){
-	if(is_onboard){
-    console.log("Pong to Server --> ");
-		 ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(keep_alive)));
+//V: Funtion that will send Different commands about Websocket information.
+function send_keepAlive(msg){
+	if(is_onboard)
+  {
+    switch(msg)
+    {
+      case Websocket_com_e.DEAD:
+        console.log("Sending Dead to server.");
+        break;
+      
+      case Websocket_com_e.ALIVE:
+        console.log("Pong to Server --> ");
+        break;
+
+      case Websocket_com_e.NO_DATA:
+        console.log("Sending No data to server.");
+        break;
+
+      case Websocket_com_e.NO_DATA:
+        console.log("Sending Websocket Closing request to server.");
+        break;
+    }
+    ws.send(concatBuffers(Uint8Array.of(Messages_e.KP_ALIVE), Uint8Array.of(msg)));
 	}
 }
 
@@ -1717,8 +1722,8 @@ function showError(message) {
   document.getElementById("errorModal").style.display = "block";
   document.getElementById("error_Message").innerText = message;
 
-  // Auto-hide after 3 seconds
-  setTimeout(hideError, 4000);
+  // Auto-hide after 10 seconds
+  setTimeout(hideError, 10000);
 }
 
 function hideError() {

@@ -243,10 +243,9 @@ typedef enum
 // Enum messages to know the status of Websocket
 typedef enum
 {
-	NI = -1,
 	DEAD = 0,
 	ALIVE = 1,
-	NO_DATA = 2,
+	STM_FREEZED = 2,
 	CLOSE_WS = 3
 } Websocket_com_e;
 
