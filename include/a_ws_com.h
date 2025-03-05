@@ -276,8 +276,8 @@ typedef enum
 // V: Struct to hold Foldback variables
 typedef struct
 {
-	uint16 foldbackTm;
-	Foldback_com_e foldback;
+	uint32_t foldback;
+	float foldbackTm;
 } Foldback_t;
 
 

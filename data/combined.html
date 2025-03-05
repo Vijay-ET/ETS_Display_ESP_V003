@@ -310,7 +310,7 @@
                                         <div class="column is-4">
                                             <input class="input FoldbakTmInput" max="10000" min="10"onchange='Protection_page_input("FoldbakTm",this.value)' step="1" type="number" value="300">
                                         </div>
-                                        <div class="column is-2">sec</div>
+                                        <div class="column is-2">mSec</div>
                                     </div>
                                 </div>
                             </div>
@@ -330,7 +330,7 @@
                                             <input class="input UvpInput" max="675" min="-1" 
                                                 onchange='Protection_page_input("Uvp",this.value)' 
                                                 step="0.1" type="number" value="30" placeholder="" 
-                                                title="Enter -1 to Turn off UVP">
+                                                title="Enter 0 to Turn off UVP">
                                         </div>
                                         <div class="column is-2">V</div>
                                     </div>
@@ -345,7 +345,7 @@
                                         </div>
                                         <div class="column is-4">
                                             <select class="input InputBox" id="foldbackRow" style="width: 300px;" 
-                                            onchange='config_page_input("Foldback", this.value)'>
+                                            onchange='Protection_page_input("Foldback", this.value)'>
                                             <option value="off">OFF</option>
                                             <option value="cv">Fold_CV</option>
                                             <option value="cc">Fold_CC</option>
@@ -365,7 +365,7 @@
                                             <input class="fit OcpInput slidercolor" max="100" min="-1" onchange='Protection_page_input("Ocp",this.value)' step="0.01" type="range" value="30" id="OcpRange" oninput='protection_page_slider_drag("Ocp",this.value)'>
                                         </div>
                                         <div class="column is-4">
-                                            <input class="input OcpInput" max="100" min="-1" onchange='Protection_page_input("Ocp",this.value)' step="0.01" type="number" value="30" placeholder="" title="Enter -1 to Turn off OCP">
+                                            <input class="input OcpInput" max="100" min="-1" onchange='Protection_page_input("Ocp",this.value)' step="0.01" type="number" value="30" placeholder="" title="Enter 0 to Turn off OCP">
                                         </div>
                                         <div class="column is-2">A</div>
                                     </div>

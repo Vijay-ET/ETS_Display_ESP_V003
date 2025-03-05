@@ -430,8 +430,8 @@ function handle_WS_Message(e)
         break;
 
       case Messages_e.FOLDBACKTM:
-        FoldBack.FoldbackTm = new Uint8Array(e.data.slice(1,3))[0];
-        update_Protection_page_values("FoldbackTm",FoldBack.FoldbackTm);
+        FoldBack.FoldbackTm = new Float32Array(e.data.slice(1,5))[0];
+        update_Protection_page_values("FoldbakTm",FoldBack.FoldbackTm);
         break;
 
       case Messages_e.XY_AXIS:
@@ -761,6 +761,10 @@ function update_dev_params(recv_devparam)
     // V: Update OcpT max limits
     document.getElementById("OcpTRange").max = OcpT_max;
     document.querySelector('input[type="number"].OcpTInput').max = OcpT_max;
+
+    // V: Update FoldbackTm max limits
+    document.getElementById("FoldbakTmRange").max = FoldbackTm_max;
+    document.querySelector('input[type="number"].FoldbakTmInput').max = FoldbackTm_max;
 	}
 }
 
@@ -1112,19 +1116,19 @@ function update_Protection_page_values(protection_str,protection_val)
       switch(protection_val)
       {
         case FoldBack_e.Fold_OFF:
-          document.getElementById("foldbackRow").value = "OFF";
+          document.getElementById("foldbackRow").value = "off";
           break;
         
         case FoldBack_e.Fold_CV:
-          document.getElementById("foldbackRow").value = "Fold_CV";
+          document.getElementById("foldbackRow").value = "cv";
           break;
 
         case FoldBack_e.Fold_CC:
-          document.getElementById("foldbackRow").value = "Fold_CC";
+          document.getElementById("foldbackRow").value = "cc";
           break;
         
         case FoldBack_e.Fold_CP:
-          document.getElementById("foldbackRow").value = "Fold_CP";
+          document.getElementById("foldbackRow").value = "cp";
           break;
 
         default:
@@ -1132,7 +1136,9 @@ function update_Protection_page_values(protection_str,protection_val)
       }
       break;
 
-    case "FoldbackTm":
+    case "FoldbakTm":
+      document.getElementById("FoldbakTmRange").value = protection_val;
+      document.querySelector('input[type="number"].FoldbakTmInput').value = protection_val;
       break;
 
     default:
@@ -1531,6 +1537,7 @@ function Protection_page_input(protection_str,protection_val)
   }
   var send_cmd_protection = null;
   int_flag = false;
+  var new_protection_val = 0;
   if(protection_str != "Foldback")
     protection_val = Number(protection_val);
 
@@ -1585,26 +1592,26 @@ function Protection_page_input(protection_str,protection_val)
       switch(protection_val)
       {
         case "off":
-          protection_val = FoldBack_e.Fold_OFF;
+          new_protection_val = FoldBack_e.Fold_OFF;
           break;
         
         case "cv":
-          protection_val = FoldBack_e.Fold_CV;
+          new_protection_val = FoldBack_e.Fold_CV;
           break;
 
         case "cc":
-          protection_val = FoldBack_e.Fold_CC;
+          new_protection_val = FoldBack_e.Fold_CC;
           break;
         
         case "cp":
-          protection_val = FoldBack_e.Fold_CP;
+          new_protection_val = FoldBack_e.Fold_CP;
           break;
 
         default:
           break;
       }
       send_cmd_protection = Uint8Array.of(Messages_e.FOLDBACK);
-      FoldBack.Foldback = protection_val;
+      FoldBack.Foldback = new_protection_val;
       int_flag = true;
       break;
 
@@ -1615,7 +1622,6 @@ function Protection_page_input(protection_str,protection_val)
         protection_val = FoldbackTm_min;
       send_cmd_protection = Uint8Array.of(Messages_e.FOLDBACKTM);
       FoldBack.FoldbackTm = protection_val;
-      int_flag = true;
       break;
 
     default:
@@ -1624,7 +1630,7 @@ function Protection_page_input(protection_str,protection_val)
   update_Protection_page_values(protection_str,protection_val);
   if(int_flag)
   {
-    ws.send(concatBuffers(send_cmd_protection, Uint8Array.of(protection_val)));
+    ws.send(concatBuffers(send_cmd_protection, Uint32Array.of(new_protection_val)));
   }
   else
   {
@@ -1660,6 +1666,10 @@ function protection_page_slider_drag(protection_slider_str,protection_slider_val
 
     case "OcpT":
       document.querySelector('input[type="number"].OcpTInput').value = protection_slider_val;
+      break;
+
+    case "FoldbakTm":
+      document.querySelector('input[type="number"].FoldbakTmInput').value = protection_slider_val;
       break;
 
     default:

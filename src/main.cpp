@@ -71,6 +71,8 @@
 	+ Implemented Modal boxes in javascript to notify users about different errors in a Non-blocking way to make the background communication work.
 	  Also added the functionality of notifying the user when STM is Freezed.
 	+ Added the functionaity to restrict Vmpp & Impp values to be in the range of calculations from the web-interface itslef.
+	+ Added Foldback & FoldbackTm Commands b/w Wi-Fi module & Web-Interface.
+	+ Discarded the Ambiguties b/w STM & Wi-Fi module with data types of Foldback & FoldbackTm.
 
 	Todo :-
 	+ Add cache control mechanism in the browser end so that Front-end files will be fetched faster.
@@ -1087,10 +1089,8 @@ void cb_com_measdata_changed(Proto_Num_e num)
 
 void cb_com_status_changed(Proto_Num_e dummy)
 {
-	// prio_cnt++;
 	status.source = (Source_e)com_drv.Status.Source;
 	status.power = com_drv.Status.Standby;
-	// ws_Send_Text("ESP (cb_com_status_changed): count_pwr = " + (String)count_pwr);
 	status.mode = com_drv.Status.Mode;
 	status.limMode = com_drv.Status.LimMode;
 	status.interlock = com_drv.Status.Interlock;
@@ -1282,32 +1282,13 @@ void cb_com_setz_changed(Proto_Num_e num)
 		break;
 	
 	case FOLDBACK:
-		switch (com_drv.foldback)
-		{
-			case 0:
-				FoldBack.foldback = FOLD_OFF;
-				break;
-			
-			case 1:
-				FoldBack.foldback = FOLD_CV;
-				break;
-
-			case 2:
-				FoldBack.foldback = FOLD_CC;
-				break;
-
-			case 3:
-				FoldBack.foldback = FOLD_CP;
-				break;
-
-			default:
-				break;
-		}
+		FoldBack.foldback = com_drv.foldback;
 		queue_WS_MSG(FOLDBACK_WS);
 		break;
 	
 	case FOLDBACKTM:
-		FoldBack.foldbackTm = (uint16)com_drv.foldbacktm;
+		// com_drv.foldbacktm = com_drv.foldbacktm * 1000;
+		FoldBack.foldbackTm = com_drv.foldbacktm;
 		queue_WS_MSG(FOLDBACKTM_WS);
 		break;
 

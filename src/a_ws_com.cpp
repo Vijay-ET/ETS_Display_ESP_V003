@@ -229,13 +229,16 @@ void init_WS(){
   });
   server.on("/combined.css", HTTP_GET, [](AsyncWebServerRequest *request){
      ESP.wdtFeed();
+     Serial_Printing_Port.println(" -->  Serving the Style Sheet..\n\n");
     request->send(SPIFFS, "/combined.css", "text/css");
   });
   server.on("/fnt/robotoV20LaExLaReg.woff2", HTTP_GET, [](AsyncWebServerRequest *request){
      ESP.wdtFeed();
+     Serial_Printing_Port.println(" -->  Serving the Font file..\n\n");
     request->send(SPIFFS, "/fnt/robotoV20LaExLaReg.woff2", "font/woff2");
   });
   server.on("/Script.js", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial_Printing_Port.println(" -->  Serving the Script File..\n\n");
      ESP.wdtFeed();
     request->send(SPIFFS, "/Script.js", "text/javascript");  
   });
@@ -277,15 +280,21 @@ void WS_COM_Handler()
       }
     }
   }
+  // else
+  // {
+  //   Serial_Printing_Port.println("Websocket Buffer full.");
+  // }
   ESP.wdtFeed();
 
   //Send ping to WS 
   if(server_running)
   {
     // V: Cleaning dead client resources for every 5 seconds sinces disconnect event not triggering.
-    if( (Ws_clean_count++) >= 70000)
+    if( (Ws_clean_count++) >= 50000)
     {
-      webSocket.cleanupClients();
+      Ws_clean_count = 0;
+      webSocket.cleanupClients(clients_num);
+      Serial_Printing_Port.println("\n==========>    Cleaning Websocket clients.   <==========\n");
     }
 
     if(client_connected)
@@ -379,6 +388,7 @@ void on_WebSocket_Event(AsyncWebSocket * server, AsyncWebSocketClient * client, 
     keep_alive = 1;
     client_connected = true;
     ++clients_num;  // V: increamenting because a client is connected.
+    Clean_serial_buffer();
     update_All_Data();
     queue_WS_MSG(KP_ALIVE);
     Ws_Ping_Time = timer_get_time();
@@ -622,6 +632,19 @@ void handle_Received_Message(uint8_t *data, size_t len)
       COM_SendParameter(DATALOGGER);
       break;
 
+    case FOLDBACK_WS:
+      memcpy((uint8_t*)&FoldBack.foldback, data + 1, sizeof(uint32_t));
+      com_drv.foldback = FoldBack.foldback;
+      COM_SendParameter(FOLDBACK);
+      break;
+
+    case FOLDBACKTM_WS:
+      memcpy((uint8_t*)&FoldBack.foldbackTm, data + 1, sizeof(float));
+      FoldBack.foldbackTm =FoldBack.foldbackTm;
+      com_drv.foldbacktm = FoldBack.foldbackTm;
+      COM_SendParameter(FOLDBACKTM);
+      break;
+
     case CONTROL_P:
     case CONTROL_RI:
     case CONTROL_PV:
@@ -667,16 +690,6 @@ void handle_Received_Message(uint8_t *data, size_t len)
         clients_num--;
         client_connected = false;
       }
-      break;
-    
-    case FOLDBACK_WS:
-      memcpy((uint8_t*)&FoldBack.foldback, data +1, sizeof(Foldback_com_e));
-      COM_SendParameter(FOLDBACK);
-      break;
-
-    case FOLDBACKTM_WS:
-      memcpy((uint8_t*)&FoldBack.foldbackTm, data +1, sizeof(uint16));
-      COM_SendParameter(FOLDBACKTM);
       break;
 
     default:
@@ -1221,14 +1234,14 @@ void ws_Send_Data(Messages_e message)
 
     case FOLDBACK_WS:
     buffer[0] = FOLDBACK_WS;
-    memcpy(buffer +1, (uint8_t*)&FoldBack.foldback, sizeof(Foldback_com_e));
-    webSocket.binaryAll(buffer,sizeof(Foldback_com_e) + 1);
+    memcpy(buffer +1, (uint8_t*)&FoldBack.foldback, sizeof(uint32_t));
+    webSocket.binaryAll(buffer,sizeof(uint32_t) + 1);
       break;
 	  
     case FOLDBACKTM_WS:
     buffer[0] = FOLDBACKTM_WS;
-    memcpy(buffer + 1, (uint8_t*)&FoldBack.foldbackTm, sizeof(uint16));
-    webSocket.binaryAll(buffer,sizeof(uint16) + 1);
+    memcpy(buffer + 1, (uint8_t*)&FoldBack.foldbackTm, sizeof(float));
+    webSocket.binaryAll(buffer,sizeof(float) + 1);
       break;
 
     default:
